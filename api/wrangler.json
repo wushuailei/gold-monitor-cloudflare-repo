@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "compatibility_date": "2025-10-08",
+  "main": "src/index.ts",
+  "name": "api",
+  "upload_source_maps": true,
+  "d1_databases": [
+    {
+      "binding": "au_gold_db",
+      "database_name": "au_gold_db",
+      "database_id": "92bb6ca3-e4fd-4766-b575-cdfa34205575"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "compatibility_flags": ["nodejs_compat"]
+}
