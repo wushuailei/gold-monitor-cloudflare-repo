@@ -65,7 +65,7 @@ export const mockApi = {
     });
   },
 
-  async getTrades(days: number = 7): Promise<Trade[]> {
+  async getTrades(_days: number = 7): Promise<Trade[]> {
     return new Promise((resolve) => {
       setTimeout(() => {
         const now = Math.floor(Date.now() / 1000);
@@ -98,7 +98,7 @@ export const mockApi = {
     return new Promise((resolve) => setTimeout(resolve, 300));
   },
 
-  async getReports(days: number = 7, limit = 50, offset = 0): Promise<Report[]> {
+  async getReports(_days: number = 7, _limit = 50, _offset = 0): Promise<Report[]> {
     return new Promise((resolve) => {
       setTimeout(() => {
         const now = Math.floor(Date.now() / 1000);
@@ -126,7 +126,7 @@ export const mockApi = {
     });
   },
 
-  async getAlerts(days: number = 7): Promise<Alert[]> {
+  async getAlerts(_days: number = 7): Promise<Alert[]> {
     return new Promise((resolve) => {
       setTimeout(() => {
         const now = Math.floor(Date.now() / 1000);

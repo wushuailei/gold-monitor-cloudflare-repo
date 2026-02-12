@@ -7,7 +7,7 @@ interface AlertListProps {
 }
 
 export function AlertList({ alerts }: AlertListProps) {
-  const getAlertTypeInfo = (alertType: string, baseType: string, nodeLevel: number) => {
+  const getAlertTypeInfo = (alertType: string, _baseType: string, nodeLevel: number) => {
     if (alertType === 'TARGET') {
       return {
         icon: <Target size={18} className="text-blue-500" />,

@@ -339,7 +339,7 @@ function App() {
                 const targetPrice = c.target_price!;
                 const isAbove = c.target_cmp === 'GTE';
                 const isBelow = c.target_cmp === 'LTE';
-                const isEqual = c.target_cmp === 'EQ';
+                // const isEqual = c.target_cmp === 'EQ';
                 
                 return (
                   <div key={c.id} className="flex justify-between items-center p-4 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 transition-colors">

@@ -19,7 +19,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
 
   useEffect(() => {
     if (isOpen && initialData) {
-        setSide(initialData.side || "买");
+        setSide((initialData.side || "买") as "买" | "卖");
         setPrice(initialData.price?.toString() || "");
         setQty(initialData.qty?.toString() || "");
         setTs(initialData.ts ? new Date(initialData.ts * 1000).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));

@@ -40,7 +40,7 @@ export function GoldChart({ data, trades, configs, onChartClick }: GoldChartProp
 
     const lineSeries = chart.addSeries(LineSeries, {
       color: "#F59E0B",
-      lineWidth: 2.5,
+      lineWidth: 2.5 as any,
       lastValueVisible: true,
       priceLineVisible: true,
     });
@@ -113,7 +113,7 @@ export function GoldChart({ data, trades, configs, onChartClick }: GoldChartProp
           
           const isAbove = config.target_cmp === 'GTE';
           const isBelow = config.target_cmp === 'LTE';
-          const isEqual = config.target_cmp === 'EQ';
+          // const isEqual = config.target_cmp === 'EQ';
           
           const line = seriesRef.current?.createPriceLine({
               price: config.target_price,
