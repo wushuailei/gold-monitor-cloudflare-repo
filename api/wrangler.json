@@ -1,18 +1,35 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "compatibility_date": "2025-10-08",
-  "main": "src/index.ts",
-  "name": "api",
-  "upload_source_maps": true,
-  "d1_databases": [
-    {
-      "binding": "au_gold_db",
-      "database_name": "au_gold_db",
-      "database_id": "92bb6ca3-e4fd-4766-b575-cdfa34205575"
-    }
-  ],
-  "observability": {
-    "enabled": true
-  },
-  "compatibility_flags": ["nodejs_compat"]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2025-10-08",
+	"main": "src/index.ts",
+	"name": "api",
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "au_gold_db",
+			"database_id": "96047a91-53a4-4800-a928-50a9f4e196c8"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "3e7ecee5f7574153a1e74c04d4c91c41"
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"triggers": {
+		"crons": [
+			"*/1 * * * *"
+		]
+	},
+	"vars": {
+		"AI_API_URL": "https://ark.cn-beijing.volces.com/api/v3",
+		"AI_MODEL": "glm-4-7-251222"
+	}
 }
