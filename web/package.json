@@ -1,5 +1,5 @@
 {
-	"name": "vite-react-template",
+	"name": "gold-monitor-web",
 	"description": "A template for building a React application with Vite, Hono, and Cloudflare Workers",
 	"cloudflare": {
 		"label": "Vite React Template",
@@ -46,6 +46,7 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
+		"deploy:pages": "npm run build && npx wrangler pages deploy dist --project-name=gold-monitor",
 		"dev": "vite",
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview"

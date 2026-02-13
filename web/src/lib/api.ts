@@ -6,18 +6,34 @@ import {
   UserConfig,
   DailyPrice,
 } from "../types";
-import { mockApi } from "./mockApi";
 
-// Re-export Trade to reuse the interface name if needed, or just use TradeType internally
-// But to match the previous file content perfectly regarding the types used:
 export interface Trade extends TradeType {}
+
+export interface GlobalConfig {
+  id: number;
+  symbol: string;
+  rise_1?: number;
+  rise_2?: number;
+  rise_3?: number;
+  fall_1?: number;
+  fall_2?: number;
+  fall_3?: number;
+  updated_ts: number;
+}
+
+export interface UserTarget {
+  id: number;
+  symbol: string;
+  target_price: number;
+  target_alert: number;
+  target_cmp: string;
+  created_ts: number;
+  updated_ts: number;
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-// 自动判断：开发环境使用 Mock，生产环境使用真实 API
-const USE_MOCK = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK !== "false";
-
-const realApi = {
+export const api = {
   async getPrices(hours: number = 24): Promise<PricePoint[]> {
     const now = Math.floor(Date.now() / 1000);
     const from = now - hours * 3600;
@@ -93,6 +109,54 @@ const realApi = {
     if (!res.ok) throw new Error("Failed to delete target");
   },
 
+  // 全局配置 API
+  async getGlobalConfig(symbol: string = "AU"): Promise<GlobalConfig> {
+    const res = await fetch(`${API_BASE}/global-config?symbol=${symbol}`);
+    if (!res.ok) throw new Error("Failed to fetch global config");
+    return res.json();
+  },
+
+  async updateGlobalConfig(config: Omit<GlobalConfig, "id" | "updated_ts">): Promise<void> {
+    const res = await fetch(`${API_BASE}/global-config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
+    if (!res.ok) throw new Error("Failed to update global config");
+  },
+
+  // 用户目标价 API
+  async getUserTargets(symbol: string = "AU"): Promise<UserTarget[]> {
+    const res = await fetch(`${API_BASE}/user-targets?symbol=${symbol}`);
+    if (!res.ok) throw new Error("Failed to fetch user targets");
+    return res.json();
+  },
+
+  async createUserTarget(target: { symbol: string; target_price: number; target_cmp: string }): Promise<void> {
+    const res = await fetch(`${API_BASE}/user-targets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(target),
+    });
+    if (!res.ok) throw new Error("Failed to create user target");
+  },
+
+  async updateUserTarget(id: number, target: { target_price: number; target_cmp: string; target_alert: number }): Promise<void> {
+    const res = await fetch(`${API_BASE}/user-targets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(target),
+    });
+    if (!res.ok) throw new Error("Failed to update user target");
+  },
+
+  async deleteUserTarget(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/user-targets/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete user target");
+  },
+
   async testFeishu(): Promise<{ success: boolean; message: string }> {
     const res = await fetch(`${API_BASE}/test/feishu`, {
       method: "POST",
@@ -125,6 +189,18 @@ const realApi = {
     }
     return res.json();
   },
-};
 
-export const api = USE_MOCK ? mockApi : realApi;
+  // 持仓 API
+  async getHoldings(symbol: string = "AU"): Promise<{
+    symbol: string;
+    total_qty: number;
+    total_cost: number;
+    avg_price: number;
+    realized_profit: number;
+    updated_ts: number;
+  }> {
+    const res = await fetch(`${API_BASE}/holdings?symbol=${symbol}`);
+    if (!res.ok) throw new Error("Failed to fetch holdings");
+    return res.json();
+  },
+};

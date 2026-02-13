@@ -22,7 +22,8 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         setSide((initialData.side || "买") as "买" | "卖");
         setPrice(initialData.price?.toString() || "");
         setQty(initialData.qty?.toString() || "");
-        setTs(initialData.ts ? new Date(initialData.ts * 1000).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
+        // initialData.ts 是毫秒
+        setTs(initialData.ts ? new Date(initialData.ts).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
         setNote(initialData.note || "");
     } else if (isOpen) {
         setTs(new Date().toISOString().slice(0, 16));
@@ -35,10 +36,10 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
     try {
       await onSubmit({
         ts: Math.floor(new Date(ts).getTime() / 1000),
-        symbol: 'AU9999',
+        symbol: 'AU',
         price: parseFloat(price),
         side,
-        qty: qty ? parseFloat(qty) : undefined,
+        qty: parseFloat(qty),
         note: note || undefined,
       });
       onClose();
@@ -99,12 +100,13 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">数量 (克，可选)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">数量 (克)</label>
           <Input
             type="number"
             step="0.01"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
+            required
             placeholder="例如: 10"
           />
         </div>

@@ -1,5 +1,6 @@
 import type { Env } from "../types";
 import { jsonResponse, errorResponse } from "../utils/cors";
+import { updateHolding } from "./holdings";
 
 /**
  * GET /api/trades?from=ts1&to=ts2
@@ -32,7 +33,7 @@ export async function handleGetTrades(
 /**
  * POST /api/trades
  *
- * 新增买卖点记录
+ * 新增买卖点记录，并自动更新持仓
  * Body: { ts, side, price, qty?, note? }
  */
 export async function handlePostTrade(
@@ -53,13 +54,28 @@ export async function handlePostTrade(
       return errorResponse("side must be 买 or 卖", origin);
     }
 
-    await env.DB.prepare(
-      "INSERT INTO trades (ts, symbol, side, price, qty, note) VALUES (?, ?, ?, ?, ?, ?)",
-    )
-      .bind(ts, "AU", side, price, qty || null, note || null)
-      .run();
+    if (!qty || qty <= 0) {
+      return errorResponse("qty must be greater than 0", origin);
+    }
 
-    return jsonResponse({ success: true }, origin, 201);
+    const symbol = "AU";
+
+    // 开始事务：插入交易记录 + 更新持仓
+    try {
+      // 插入交易记录
+      await env.DB.prepare(
+        "INSERT INTO trades (ts, symbol, side, price, qty, note) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+        .bind(ts, symbol, side, price, qty, note || null)
+        .run();
+
+      // 更新持仓
+      await updateHolding(env.DB, symbol, side, price, qty);
+
+      return jsonResponse({ success: true }, origin, 201);
+    } catch (err: any) {
+      return errorResponse(err.message || "Failed to create trade", origin, 400);
+    }
   } catch (err) {
     return errorResponse("Invalid request body", origin);
   }

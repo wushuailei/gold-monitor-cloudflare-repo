@@ -4,7 +4,6 @@ import { sendFeishu, buildTargetMessage } from "../services/feishu";
 interface TargetConfig {
   id: number;
   symbol: string;
-  created_by: string;
   target_price: number;
   target_alert: number;
   target_cmp: string; // 'EQ' | 'GTE' | 'LTE'
@@ -13,7 +12,7 @@ interface TargetConfig {
 /**
  * 检查目标价提醒
  *
- * 从 user_configs 表读取 target_price / target_cmp / target_alert 配置
+ * 从 user_targets 表读取 target_price / target_cmp / target_alert 配置
  * 对比方式：
  *   EQ  → |priceNow - target| <= 0.01
  *   GTE → priceNow >= target
@@ -32,9 +31,9 @@ export async function checkTargets(
 ): Promise<void> {
   // 查询所有开启目标价提醒的配置
   const result = await env.DB.prepare(
-    `SELECT id, symbol, created_by, target_price, target_alert, target_cmp
-     FROM user_configs
-     WHERE symbol = ? AND target_alert = 1 AND target_price IS NOT NULL`,
+    `SELECT id, symbol, target_price, target_alert, target_cmp
+     FROM user_targets
+     WHERE symbol = ? AND target_alert = 1`,
   )
     .bind(symbol)
     .all<TargetConfig>();
@@ -55,7 +54,7 @@ export async function checkTargets(
         t.target_price,
         t.target_cmp,
         priceNow,
-        t.created_by,
+        "user",
       );
       const ok = await sendFeishu(env.FEISHU_WEBHOOK, msg);
       if (!ok) {
@@ -71,15 +70,15 @@ export async function checkTargets(
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO alerts (ts, symbol, created_by, alert_type, base_type, node_level, price, ref_price, change_percent, status, error)
-         VALUES (?, ?, ?, 'TARGET', 'TARGET', 0, ?, ?, NULL, ?, ?)`,
-      ).bind(ts, symbol, t.created_by, priceNow, t.target_price, status, error),
+         VALUES (?, ?, 'user', 'TARGET', 'TARGET', 0, ?, ?, NULL, ?, ?)`,
+      ).bind(ts, symbol, priceNow, t.target_price, status, error),
       env.DB.prepare(
-        `UPDATE user_configs SET target_alert = 0 WHERE id = ?`,
+        `UPDATE user_targets SET target_alert = 0 WHERE id = ?`,
       ).bind(t.id),
     ]);
 
     console.log(
-      `[TargetCheck] ${t.created_by}: target=${t.target_price} cmp=${t.target_cmp} price=${priceNow} → ${status}`,
+      `[TargetCheck] target=${t.target_price} cmp=${t.target_cmp} price=${priceNow} → ${status}`,
     );
   }
 }

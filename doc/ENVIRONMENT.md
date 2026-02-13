@@ -12,7 +12,9 @@
 | `AI_API_KEY` | ❌ | `.dev.vars` | Cloudflare Secret | AI 服务密钥（需要 AI 功能时） |
 | `AI_API_URL` | ❌ | `wrangler.json` | `wrangler.json` | AI 服务地址 |
 | `AI_MODEL` | ❌ | `wrangler.json` | `wrangler.json` | AI 模型名称 |
-| `CORS_ORIGIN` | ❌ | `.dev.vars` | `.dev.vars` 或 Dashboard | 跨域源（前后端分离时） |
+| `REQUIRE_REFERER` | ❌ | `.dev.vars` | Dashboard Variable | 启用 Referer 检查（推荐设为 `true`） |
+| `ALLOWED_ORIGINS` | ❌ | `.dev.vars` | Dashboard Variable | 允许的来源域名（逗号分隔） |
+| `CORS_ORIGIN` | ❌ | `.dev.vars` | Dashboard Variable | 跨域源（前后端分离时） |
 
 ---
 
@@ -37,6 +39,10 @@ FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id
 
 # 可选：AI 功能（如果需要测试 AI 分析）
 AI_API_KEY=sk-your-api-key
+
+# 可选：安全检查（推荐启用）
+REQUIRE_REFERER=true
+ALLOWED_ORIGINS=localhost:5173,localhost:8787
 
 # 可选：CORS（如果前后端分离开发）
 CORS_ORIGIN=http://localhost:5173
@@ -170,6 +176,8 @@ npx wrangler secret put AI_API_KEY
 |--------|------|-----|------|
 | `FEISHU_WEBHOOK` | Secret | `https://open.feishu.cn/open-apis/bot/v2/hook/xxx` | ✅ 必填 |
 | `AI_API_KEY` | Secret | `sk-your-api-key` | ❌ 可选（需要 AI 功能时） |
+| `REQUIRE_REFERER` | Variable | `true` | ❌ 推荐（启用安全检查） |
+| `ALLOWED_ORIGINS` | Variable | `gold-monitor.pages.dev,your-domain.com` | ❌ 推荐（配合 Referer 检查） |
 
 **注意**：
 - `AI_API_URL`、`AI_MODEL`、`GOLD_API_KEY`、`GOLD_API_URL` 这些变量在 `wrangler.json` 中配置，**不需要**在 Dashboard 中添加
@@ -183,7 +191,7 @@ npx wrangler secret put AI_API_KEY
 {
   "vars": {
     "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-    "AI_MODEL": "gpt-4o-mini"
+    "AI_MODEL": "gpt-4o-mini",
   }
 }
 ```
@@ -203,6 +211,9 @@ npx wrangler d1 execute au_gold_db --remote --file=migrations/0003_create_report
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0004_create_trades_table.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0005_create_user_configs_table.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0006_create_daily_prices_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0007_create_global_configs_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0008_create_user_targets_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0009_create_holdings_table.sql
 ```
 
 ### 5. 部署后端
@@ -216,8 +227,9 @@ npx wrangler deploy
 
 ```bash
 cd web
-npm run build
-npx wrangler pages deploy dist --project-name=gold-monitor
+# npm run build
+# npx wrangler pages deploy dist --project-name=gold-monitor
+npm run deploy:pages
 ```
 
 或通过 Cloudflare Dashboard 连接 Git 仓库自动部署。
@@ -365,9 +377,16 @@ npx wrangler secret delete GOLD_API_URL
 **最简配置（只使用告警功能）**：
 - `FEISHU_WEBHOOK` (Secret) - 必填
 
+**推荐配置（包含安全检查）**：
+- `FEISHU_WEBHOOK` (Secret) - 必填
+- `REQUIRE_REFERER` (Variable) - 设为 `true`
+- `ALLOWED_ORIGINS` (Variable) - 设为你的前端域名，如 `gold-monitor.pages.dev,your-domain.com`
+
 **完整配置（包括 AI 功能）**：
 - `FEISHU_WEBHOOK` (Secret) - 必填
 - `AI_API_KEY` (Secret) - 可选
+- `REQUIRE_REFERER` (Variable) - 推荐
+- `ALLOWED_ORIGINS` (Variable) - 推荐
 
 **其他变量**：
 - `AI_API_URL`、`AI_MODEL` → 在 `wrangler.json` 中配置

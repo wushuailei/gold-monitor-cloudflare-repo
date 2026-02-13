@@ -17,10 +17,9 @@ interface TriggeredNode {
   refPrice: number;
 }
 
-interface UserConfig {
+interface GlobalConfig {
   id: number;
   symbol: string;
-  created_by: string;
   rise_1: number | null;
   rise_2: number | null;
   rise_3: number | null;
@@ -167,10 +166,11 @@ async function getTodayAlertCount(
 /**
  * 告警引擎主入口
  *
- * 1. 查 user_configs 获取每个用户的涨跌节点配置
- * 2. 查昨日收盘价 + 未平仓买入价
- * 3. 对每种基准分别 checkNodes
- * 4. 去重判断后发送飞书 + 写入 alerts 记录
+ * 1. 查 global_configs 获取全局涨跌节点配置
+ * 2. 查询所有用户列表（从 user_targets 或其他表）
+ * 3. 查昨日收盘价 + 未平仓买入价
+ * 4. 对每个用户使用全局配置检查节点
+ * 5. 去重判断后发送飞书 + 写入 alerts 记录
  */
 export async function runAlertEngine(
   env: Env,
@@ -180,18 +180,23 @@ export async function runAlertEngine(
 ): Promise<void> {
   const todayTs = getTodayMidnightTs();
 
-  // 1. 查询所有用户配置
-  const configsResult = await env.DB.prepare(
-    `SELECT id, symbol, created_by, rise_1, rise_2, rise_3, fall_1, fall_2, fall_3
-     FROM user_configs WHERE symbol = ?`,
+  // 1. 查询全局配置
+  const globalConfig = await env.DB.prepare(
+    `SELECT id, symbol, rise_1, rise_2, rise_3, fall_1, fall_2, fall_3
+     FROM global_configs WHERE symbol = ?`,
   )
     .bind(symbol)
-    .all<UserConfig>();
+    .first<GlobalConfig>();
 
-  const configs = configsResult.results || [];
-  if (configs.length === 0) return;
+  if (!globalConfig) {
+    console.log(`[AlertEngine] No global config for ${symbol}`);
+    return;
+  }
 
-  // 2. 查询参考价格（所有用户共用）
+  // 2. 获取所有用户列表（单用户系统，固定为 'user'）
+  const users = [{ created_by: 'user' }];
+
+  // 3. 查询参考价格（所有用户共用）
   const [yesterdayClose, activeBuyPrice] = await Promise.all([
     getYesterdayClose(env.DB, symbol),
     getActiveBuyPrice(env.DB, symbol),
@@ -203,11 +208,11 @@ export async function runAlertEngine(
 
   if (yesterdayClose === null && activeBuyPrice === null) return;
 
-  // 3. 遍历每个用户的配置
-  for (const cfg of configs) {
-    const riseNodes = [cfg.rise_1, cfg.rise_2, cfg.rise_3];
-    const fallNodes = [cfg.fall_1, cfg.fall_2, cfg.fall_3];
+  const riseNodes = [globalConfig.rise_1, globalConfig.rise_2, globalConfig.rise_3];
+  const fallNodes = [globalConfig.fall_1, globalConfig.fall_2, globalConfig.fall_3];
 
+  // 4. 遍历每个用户
+  for (const user of users) {
     // 收集两种基准下的触发节点
     const allTriggered: TriggeredNode[] = [];
 
@@ -231,13 +236,13 @@ export async function runAlertEngine(
 
     if (allTriggered.length === 0) continue;
 
-    // 4. 逐节点去重并发送
+    // 5. 逐节点去重并发送
     for (const node of allTriggered) {
       const maxSendCount = node.nodeLevel; // 1级→1次, 2级→2次, 3级→3次
       const sentCount = await getTodayAlertCount(
         env.DB,
         symbol,
-        cfg.created_by,
+        user.created_by,
         node.alertType,
         node.baseType,
         node.nodeLevel,
@@ -258,7 +263,7 @@ export async function runAlertEngine(
           node.alertType,
           node.baseType,
           node.nodeLevel,
-          cfg.created_by,
+          user.created_by,
         );
         const ok = await sendFeishu(env.FEISHU_WEBHOOK, msg);
         if (!ok) {
@@ -278,7 +283,7 @@ export async function runAlertEngine(
         .bind(
           ts,
           symbol,
-          cfg.created_by,
+          user.created_by,
           node.alertType,
           node.baseType,
           node.nodeLevel,
@@ -291,7 +296,7 @@ export async function runAlertEngine(
         .run();
 
       console.log(
-        `[AlertEngine] ${cfg.created_by}: ${node.alertType} L${node.nodeLevel} (${node.baseType}) ${node.changePercent.toFixed(2)}% → ${status}`,
+        `[AlertEngine] ${user.created_by}: ${node.alertType} L${node.nodeLevel} (${node.baseType}) ${node.changePercent.toFixed(2)}% → ${status}`,
       );
     }
   }

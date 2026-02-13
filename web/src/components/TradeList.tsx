@@ -5,9 +5,13 @@ import { TrendingUp, TrendingDown, Coins } from "lucide-react";
 interface TradeListProps {
   trades: Trade[];
   currentPrice?: number;
+  holdingsAvgPrice?: number;
+  holdingsQty?: number;
+  holdingsCost?: number;
+  holdingsRealizedProfit?: number;
 }
 
-export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
+export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, holdingsQty = 0, holdingsCost = 0, holdingsRealizedProfit = 0 }: TradeListProps) {
   if (trades.length === 0) {
     return (
       <div>
@@ -25,21 +29,19 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
   // 按时间倒序排列
   const sortedTrades = [...trades].sort((a, b) => b.ts - a.ts);
 
-  // 计算总收益
-  const buyTrades = trades.filter(t => t.side === '买');
-  const sellTrades = trades.filter(t => t.side === '卖');
+  // 使用后端传来的真实持仓数据
+  const holdingQty = holdingsQty;
   
-  const totalBuyAmount = buyTrades.reduce((sum, t) => sum + (t.price * (t.qty || 0)), 0);
-  const totalBuyQty = buyTrades.reduce((sum, t) => sum + (t.qty || 0), 0);
-  const avgBuyPrice = totalBuyQty > 0 ? totalBuyAmount / totalBuyQty : 0;
+  // 使用后端的已实现盈亏
+  const realizedProfit = holdingsRealizedProfit;
   
-  const totalSellAmount = sellTrades.reduce((sum, t) => sum + (t.price * (t.qty || 0)), 0);
-  const totalSellQty = sellTrades.reduce((sum, t) => sum + (t.qty || 0), 0);
+  // 浮动盈亏：当前持仓 * (当前价 - 平均成本)
+  const unrealizedProfit = holdingQty > 0 && currentPrice > 0 && holdingsAvgPrice > 0
+    ? (currentPrice - holdingsAvgPrice) * holdingQty
+    : 0;
   
-  const holdingQty = totalBuyQty - totalSellQty;
-  const realizedProfit = totalSellAmount - (sellTrades.reduce((sum, t) => sum + (avgBuyPrice * (t.qty || 0)), 0));
-  const unrealizedProfit = holdingQty > 0 && currentPrice > 0 ? (currentPrice - avgBuyPrice) * holdingQty : 0;
   const totalProfit = realizedProfit + unrealizedProfit;
+  const totalBuyAmount = holdingsCost;
 
   return (
     <div>
@@ -54,12 +56,12 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
       </div>
 
       {/* 收益统计卡片 */}
-      {totalBuyQty > 0 && (
+      {holdingQty > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
             <div className="text-xs text-blue-600 font-medium mb-1">持仓数量</div>
             <div className="text-2xl font-bold text-blue-900">{holdingQty.toFixed(2)} 克</div>
-            <div className="text-xs text-blue-600 mt-1">平均成本 ¥{avgBuyPrice.toFixed(2)}</div>
+            <div className="text-xs text-blue-600 mt-1">平均成本 ¥{holdingsAvgPrice.toFixed(2)}</div>
           </div>
           
           <div className={`rounded-lg p-4 border ${
@@ -74,8 +76,8 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
               {unrealizedProfit >= 0 ? '+' : ''}¥{unrealizedProfit.toFixed(2)}
             </div>
             <div className={`text-xs mt-1 ${unrealizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {holdingQty > 0 && currentPrice > 0 && (
-                <>每克 {unrealizedProfit >= 0 ? '+' : ''}¥{((currentPrice - avgBuyPrice)).toFixed(2)}</>
+              {holdingQty > 0 && currentPrice > 0 && holdingsAvgPrice > 0 && (
+                <>每克 {unrealizedProfit >= 0 ? '+' : ''}¥{((currentPrice - holdingsAvgPrice)).toFixed(2)}</>
               )}
             </div>
           </div>
@@ -92,7 +94,7 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
               {realizedProfit >= 0 ? '+' : ''}¥{realizedProfit.toFixed(2)}
             </div>
             <div className={`text-xs mt-1 ${realizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              已卖出 {totalSellQty.toFixed(2)} 克
+              所有已平仓交易
             </div>
           </div>
 
@@ -108,7 +110,7 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
               {totalProfit >= 0 ? '+' : ''}¥{totalProfit.toFixed(2)}
             </div>
             <div className={`text-xs mt-1 ${totalProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {avgBuyPrice > 0 && ((totalProfit / totalBuyAmount) * 100).toFixed(2)}% 收益率
+              {totalBuyAmount > 0 && ((totalProfit / totalBuyAmount) * 100).toFixed(2)}% 收益率
             </div>
           </div>
         </div>
@@ -130,6 +132,16 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
           <tbody>
             {sortedTrades.map((trade) => {
               const amount = trade.qty ? trade.price * trade.qty : 0;
+              
+              // 计算卖出盈亏（使用持仓平均成本）
+              let profitLoss = 0;
+              let profitLossPercent = 0;
+              
+              if (trade.side === "卖" && trade.qty && holdingsAvgPrice > 0) {
+                profitLoss = (trade.price - holdingsAvgPrice) * trade.qty;
+                profitLossPercent = ((trade.price - holdingsAvgPrice) / holdingsAvgPrice) * 100;
+              }
+              
               return (
                 <tr key={trade.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4 text-sm text-gray-600">
@@ -138,18 +150,30 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       {trade.side === "买" ? (
-                        <>
-                          <TrendingUp size={18} className="text-green-500" />
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                            买入
-                          </span>
-                        </>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                          买入
+                        </span>
                       ) : (
                         <>
-                          <TrendingDown size={18} className="text-red-500" />
-                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
-                            卖出
-                          </span>
+                          {profitLoss > 0 ? (
+                            <>
+                              <TrendingUp size={18} className="text-red-500" />
+                              <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                                卖出
+                              </span>
+                            </>
+                          ) : profitLoss < 0 ? (
+                            <>
+                              <TrendingDown size={18} className="text-green-500" />
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                                卖出
+                              </span>
+                            </>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                              卖出
+                            </span>
+                          )}
                         </>
                       )}
                     </div>
@@ -167,7 +191,14 @@ export function TradeList({ trades, currentPrice = 0 }: TradeListProps) {
                   </td>
                   <td className="py-3 px-4">
                     {amount > 0 ? (
-                      <span className="font-mono font-semibold text-gray-900">¥{amount.toFixed(2)}</span>
+                      <div className="flex flex-col">
+                        <span className="font-mono font-semibold text-gray-900">¥{amount.toFixed(2)}</span>
+                        {trade.side === "卖" && profitLoss !== 0 && (
+                          <span className={`text-xs font-medium ${profitLoss > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {profitLoss > 0 ? '+' : ''}¥{profitLoss.toFixed(2)} ({profitLossPercent > 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%)
+                          </span>
+                        )}
+                      </div>
                     ) : '-'}
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">

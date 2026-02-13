@@ -1,31 +1,22 @@
 # 部署指南
 
-本文档详细说明如何将金价监控系统部署到 Cloudflare。
-
----
-
-## 部署概览
+本文档提供金价监控系统的快速部署步骤。
 
 系统由两部分组成：
-- **后端 API**：部署到 Cloudflare Workers
-- **前端 Web**：部署到 Cloudflare Pages
+- **后端 API**：Cloudflare Workers
+- **前端 Web**：Cloudflare Pages
+
+> 环境变量详细说明请参考 [环境变量配置指南](./ENVIRONMENT.md)
 
 ---
 
 ## 前置准备
 
-### 1. 注册 Cloudflare 账号
-
-访问 [Cloudflare](https://dash.cloudflare.com/sign-up) 注册账号（免费）。
-
-### 2. 安装必要工具
+### 1. 安装工具
 
 ```bash
-# 安装 Node.js（18 或更高版本）
+# 安装 Node.js（18+）
 node --version
-
-# 安装 pnpm（推荐）或 npm
-npm install -g pnpm
 
 # 安装 wrangler CLI
 npm install -g wrangler
@@ -34,13 +25,9 @@ npm install -g wrangler
 wrangler login
 ```
 
-### 3. 获取飞书 Webhook
+### 2. 获取飞书 Webhook
 
-1. 打开飞书群聊
-2. 点击右上角 `···` → `设置` → `群机器人`
-3. 点击 `添加机器人` → `自定义机器人`
-4. 设置机器人名称（如：金价监控）
-5. 复制生成的 Webhook 地址
+飞书群聊 → 右上角 `···` → `设置` → `群机器人` → `添加机器人` → `自定义机器人` → 复制 Webhook 地址
 
 ---
 
@@ -109,65 +96,38 @@ id = "3e7ecee5f7574153a1e74c04d4c91c41"
 
 ## 第二步：配置环境变量
 
-### 1. 配置必填变量（Secrets）
+> 详细配置说明请参考 [环境变量配置指南](./ENVIRONMENT.md)
+
+### 必填配置
 
 ```bash
 cd api
 
-# 配置飞书 Webhook（必填）
+# 配置飞书 Webhook
 npx wrangler secret put FEISHU_WEBHOOK
-# 粘贴你的 Webhook 地址，按回车
+# 粘贴 Webhook 地址后按回车
 ```
 
-### 2. 配置可选变量（AI 功能）
+### 可选配置（AI 功能）
 
-如果需要 AI 分析功能：
+如需 AI 分析功能：
 
 ```bash
 # 配置 AI API Key
 npx wrangler secret put AI_API_KEY
-# 粘贴你的 API Key（如 OpenAI 或 DeepSeek），按回车
+
+# 编辑 api/wrangler.json 添加：
+# "vars": {
+#   "AI_API_URL": "https://api.openai.com/v1/chat/completions",
+#   "AI_MODEL": "gpt-4o-mini"
+# }
 ```
 
-然后编辑 `api/wrangler.json`，在 `vars` 字段中添加：
-
-```json
-{
-  "vars": {
-    "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-    "AI_MODEL": "gpt-4o-mini"
-  }
-}
-```
-
-**常用 AI 服务配置**：
-
-OpenAI：
-```json
-{
-  "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-  "AI_MODEL": "gpt-4o-mini"
-}
-```
-
-DeepSeek：
-```json
-{
-  "AI_API_URL": "https://api.deepseek.com/v1/chat/completions",
-  "AI_MODEL": "deepseek-chat"
-}
-```
-
-### 3. 验证配置
+### 验证配置
 
 ```bash
-# 查看已配置的 Secrets
 npx wrangler secret list
 ```
-
-**应该看到**：
-- `FEISHU_WEBHOOK`
-- `AI_API_KEY`（如果配置了）
 
 ---
 
@@ -223,7 +183,7 @@ npx wrangler deploy
 ```
 ✨ Built successfully!
 ✨ Successfully published your script to
-   https://api.domielabbott.workers.dev
+   https://gold-monitor-api.domielabbott.workers.dev
 ```
 
 **记录你的 Workers 地址**，格式为：`https://xxx.workers.dev`
@@ -241,101 +201,47 @@ curl https://你的-worker-地址.workers.dev/api/test/feishu
 
 ## 第五步：部署前端 Web
 
-### 方式一：使用 wrangler 命令行部署
-
-#### 1. 配置前端 API 地址
-
-编辑 `web/.env.production`（如果不存在则创建）：
-
-```env
-VITE_API_BASE=https://你的-worker-地址.workers.dev
-```
-
-#### 2. 构建前端
+### 方式一：命令行部署（纯静态）
 
 ```bash
 cd web
+
+# 1. 配置 API 地址（编辑 web/.env.production）
+# VITE_API_BASE=https://你的-worker-地址.workers.dev
+
+# 2. 安装依赖并构建
 npm install
-npm run build
-```
+npm run build:prod
 
-#### 3. 部署到 Cloudflare Pages
-
-```bash
+# 3. 部署到 Pages
 npx wrangler pages deploy dist --project-name=gold-monitor
 ```
 
-**输出示例**：
-```
-✨ Success! Uploaded 25 files
-✨ Deployment complete!
-   https://gold-monitor.pages.dev
-```
+### 方式二：Git 自动部署（推荐）
 
-### 方式二：通过 Cloudflare Dashboard 部署（推荐）
+1. 推送代码到 Git 仓库
+2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+3. **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
+4. 选择仓库并配置：
+   - Framework preset: `Vite`
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+   - Root directory: `web`
+   - 环境变量：`VITE_API_BASE=https://你的-worker-地址.workers.dev`
+5. 点击 **Save and Deploy**
 
-#### 1. 推送代码到 Git 仓库
-
-```bash
-git add .
-git commit -m "Initial commit"
-git push origin main
-```
-
-#### 2. 在 Cloudflare Dashboard 创建 Pages 项目
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 **Workers & Pages**
-3. 点击 **Create application** → **Pages** → **Connect to Git**
-4. 选择你的 Git 仓库
-5. 配置构建设置：
-
-**构建配置**：
-```
-Framework preset: Vite
-Build command: npm run build
-Build output directory: dist
-Root directory: web
-```
-
-**环境变量**：
-```
-VITE_API_BASE=https://你的-worker-地址.workers.dev
-```
-
-6. 点击 **Save and Deploy**
-
-#### 3. 等待部署完成
-
-部署完成后，你会得到一个 Pages 地址：
-```
-https://gold-monitor.pages.dev
-```
+部署完成后得到 Pages 地址：`https://gold-monitor.pages.dev`
 
 ---
 
-## 第六步：配置 CORS（如果需要）
+## 第六步：配置 CORS（可选）
 
-如果前后端部署在不同域名，需要配置 CORS。
+仅当前后端在不同域名时需要。在 Cloudflare Dashboard 中：
 
-### 在 Cloudflare Dashboard 配置
-
-1. 进入 **Workers & Pages**
-2. 选择你的 Worker（api）
-3. 进入 **Settings** → **Variables**
-4. 添加变量：
-   - 名称：`CORS_ORIGIN`
-   - 值：`https://你的-pages-地址.pages.dev`
-   - 类型：Text（不加密）
-
-### 或使用 wrangler 命令
-
-编辑 `api/.dev.vars`（仅用于记录，不会部署）：
-```env
-CORS_ORIGIN=https://你的-pages-地址.pages.dev
-```
-
-然后在 Dashboard 中手动添加。
+**Workers & Pages** → 选择 Worker（api）→ **Settings** → **Variables** → 添加：
+- 名称：`CORS_ORIGIN`
+- 值：`https://gold-monitor.pages.dev`
+- 类型：Variable
 
 ---
 
@@ -368,231 +274,123 @@ https://gold-monitor.pages.dev
 
 ---
 
-## Cloudflare Dashboard 配置清单
+## Dashboard 配置检查清单
 
-### Workers & Pages → 你的 Worker（api）
+> 详细配置说明请参考 [环境变量配置指南](./ENVIRONMENT.md)
 
-#### Settings → Variables
+### Worker（api）配置
 
-**Secrets（加密变量）**：
-- ✅ `FEISHU_WEBHOOK` - 飞书群机器人地址（必填）
-- ❌ `AI_API_KEY` - AI 服务密钥（可选，需要 AI 功能时）
+**Settings → Variables**：
+- ✅ `FEISHU_WEBHOOK` (Secret) - 必填
+- ❌ `AI_API_KEY` (Secret) - 可选
+- ❌ `REQUIRE_REFERER` (Variable) - 推荐设为 `true`
+- ❌ `ALLOWED_ORIGINS` (Variable) - 推荐配置前端域名
 
-**Variables（普通变量）**：
-- ❌ `CORS_ORIGIN` - 跨域源地址（可选，前后端分离时）
-
-**不需要配置的变量**：
-- ❌ `AI_API_URL` - 在 wrangler.json 中配置
-- ❌ `AI_MODEL` - 在 wrangler.json 中配置
-- ❌ `GOLD_API_KEY` - 预留字段，当前未使用
-- ❌ `GOLD_API_URL` - 预留字段，当前未使用
-
-#### Settings → Triggers
-
-**Cron Triggers**：
-- ✅ 应该看到：`*/1 * * * *`（每分钟执行）
-- 这是自动配置的，无需手动添加
-
-#### Settings → Bindings
-
-**D1 Databases**：
+**Settings → Bindings**：
 - ✅ `DB` → `au_gold_db`
+- ✅ `KV` → 你的 KV 名称
 
-**KV Namespaces**：
-- ✅ `KV` → `au_gold_kv` 或你创建的 KV 名称
+**Settings → Triggers**：
+- ✅ Cron: `*/1 * * * *`（自动配置）
 
-### Workers & Pages → 你的 Pages（gold-monitor）
+### Pages（gold-monitor）配置
 
-#### Settings → Environment variables
-
-**Production**：
-- ✅ `VITE_API_BASE` - 你的 Worker 地址（如果前后端分离）
+**Settings → Environment variables → Production**：
+- ✅ `VITE_API_BASE` - 你的 Worker 地址
 
 ---
 
 ## 常见问题
 
-### 1. 部署后前端无法访问后端
+### 前端访问不了
 
-**检查**：
-- 前端环境变量 `VITE_API_BASE` 是否正确
-- 后端是否配置了 `CORS_ORIGIN`
-- 浏览器控制台是否有 CORS 错误
+1. 检查 `web/.env.production` 中的 `VITE_API_BASE` 是否正确
+2. 确认构建时环境变量生效：`findstr /s "你的域名" web\dist\assets\*.js`
+3. 如果前后端不同域名，在 Worker 中配置 `CORS_ORIGIN`
 
-**解决**：
-```bash
-# 在 Dashboard 中添加 CORS_ORIGIN 变量
-CORS_ORIGIN=https://你的-pages-地址.pages.dev
-```
+### 定时任务不执行
 
-### 2. 定时任务没有执行
+1. 检查 Worker → Settings → Triggers 中的 Cron 配置
+2. 查看 Worker → Logs 中的错误信息
+3. 重新部署：`cd api && npx wrangler deploy`
 
-**检查**：
-- Workers → Settings → Triggers 中是否有 Cron 配置
-- Workers → Logs 中是否有错误信息
+### 飞书收不到消息
 
-**解决**：
-```bash
-# 重新部署
-cd api
-npx wrangler deploy
-```
+1. 验证 `FEISHU_WEBHOOK` 配置：`npx wrangler secret list`
+2. 测试接口：`curl -X POST https://你的-worker.workers.dev/api/test/feishu`
+3. 检查飞书机器人是否被移除
 
-### 3. 飞书收不到消息
+### AI 功能不工作
 
-**检查**：
-- `FEISHU_WEBHOOK` 是否配置正确
-- 飞书机器人是否被移除
+1. 确认 `AI_API_KEY` 已配置
+2. 检查 `wrangler.json` 中的 `AI_API_URL` 和 `AI_MODEL`
+3. 测试：`curl -X POST https://你的-worker.workers.dev/api/test/daily-report`
 
-**解决**：
-```bash
-# 重新配置 Webhook
-npx wrangler secret put FEISHU_WEBHOOK
-```
+### 数据库查询失败
 
-### 4. AI 功能不工作
-
-**检查**：
-- `AI_API_KEY` 是否配置
-- `AI_API_URL` 和 `AI_MODEL` 是否在 wrangler.json 中配置
-- AI API 额度是否用完
-
-**解决**：
-```bash
-# 检查配置
-npx wrangler secret list
-
-# 测试 AI 功能
-curl -X POST https://你的-worker-地址.workers.dev/api/test/daily-report
-```
-
-### 5. 数据库查询失败
-
-**检查**：
-- D1 数据库是否创建
-- 数据库迁移是否执行
-- wrangler.json 中的 database_id 是否正确
-
-**解决**：
-```bash
-# 查看数据库列表
-npx wrangler d1 list
-
-# 重新执行迁移
-npx wrangler d1 execute au_gold_db --remote --file=migrations/0001_create_prices_table.sql
-```
+1. 验证数据库：`npx wrangler d1 list`
+2. 检查迁移是否执行完成
+3. 确认 `wrangler.json` 中的 `database_id` 正确
 
 ---
 
 ## 更新部署
 
-### 更新后端
+### 后端更新
 
 ```bash
-cd api
-git pull
-npm install
-npx wrangler deploy
+cd api && npx wrangler deploy
 ```
 
-### 更新前端
+### 前端更新
 
-**方式一：命令行**
+**命令行方式**：
 ```bash
-cd web
-git pull
-npm install
-npm run build
-npx wrangler pages deploy dist --project-name=gold-monitor
+cd web && npm run deploy:pages
 ```
 
-**方式二：Git 自动部署**
+**Git 自动部署**：
 ```bash
-git pull
-git add .
-git commit -m "Update"
 git push origin main
 ```
 
-Cloudflare Pages 会自动检测到更新并重新部署。
+Pages 会自动检测并重新部署。
 
 ---
 
-## 监控和日志
+## 监控与维护
 
-### 查看 Worker 日志
+### 查看日志
 
 ```bash
+# 实时查看 Worker 日志
 npx wrangler tail
+
+# 或在 Dashboard 中查看
+# Workers & Pages → 选择项目 → Logs
 ```
 
-### 在 Dashboard 查看日志
+### 数据库备份
 
-1. 进入 **Workers & Pages**
-2. 选择你的 Worker
-3. 点击 **Logs** 标签
+```bash
+npx wrangler d1 export au_gold_db --remote --output=backup.sql
+```
 
-### 查看 Pages 部署日志
+### 成本估算
 
-1. 进入 **Workers & Pages**
-2. 选择你的 Pages 项目
-3. 点击 **Deployments** 标签
-4. 选择一个部署查看详细日志
-
----
-
-## 成本估算
-
-### Cloudflare 免费额度
-
-**Workers**：
-- 100,000 请求/天
-- 10ms CPU 时间/请求
-
-**D1**：
-- 5GB 存储
-- 500 万行读取/天
-- 10 万行写入/天
-
-**KV**：
-- 100,000 读取/天
-- 1,000 写入/天
-- 1GB 存储
-
-**Pages**：
-- 500 次构建/月
-- 无限请求
-
-### 本系统预估使用量
-
-**每天**：
-- Workers 请求：~2,000（定时任务 + API 调用）
-- D1 读取：~10,000 行
-- D1 写入：~1,500 行
-- KV 读写：~100 次
-
-**结论**：完全在免费额度内。
+本系统完全在 Cloudflare 免费额度内：
+- Workers: ~2,000 请求/天（免费额度 100,000/天）
+- D1: ~10,000 行读取/天（免费额度 5M/天）
+- Pages: 无限请求
 
 ---
 
 ## 安全建议
 
-1. **启用 Cloudflare Access**
-   - 保护前端和 API 访问
-   - 参考 [访问控制文档](./ACCESS_CONTROL.md)
-
-2. **定期备份数据库**
-   ```bash
-   npx wrangler d1 export au_gold_db --remote --output=backup.sql
-   ```
-
-3. **监控 API 使用量**
-   - 在 Dashboard 中查看使用统计
-   - 设置告警阈值
-
-4. **定期轮换密钥**
-   - 定期更新 `FEISHU_WEBHOOK`
-   - 定期更新 `AI_API_KEY`
+1. 启用访问控制 - 参考 [访问控制文档](./ACCESS_CONTROL.md)
+2. 定期备份数据库
+3. 定期轮换 API 密钥
+4. 监控 API 使用量
 
 ---
 

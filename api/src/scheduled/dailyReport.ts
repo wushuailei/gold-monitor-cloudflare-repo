@@ -1,5 +1,5 @@
 import type { Env } from "../types";
-import { generateReport, getRecentPrices } from "./aiAnalysis";
+import { generateReport, getRecentPrices, getDailyPrices } from "./aiAnalysis";
 import { sendFeishu, buildReportMessage } from "../services/feishu";
 import { formatTs } from "../utils/time";
 
@@ -50,20 +50,24 @@ export async function sendDailyReport(
   // 4. 获取最近30分钟的价格序列
   const recentPrices = await getRecentPrices(env.DB, symbol, ts, 30);
 
-  // 5. 计算短期涨跌幅
+  // 5. 获取过去3天的日线数据
+  const dailyPrices = await getDailyPrices(env.DB, symbol, 3);
+
+  // 6. 计算短期涨跌幅
   let change5m: number | null = null;
   const price5mAgo = recentPrices.find((p) => p.ts <= ts - 300);
   if (price5mAgo) {
     change5m = ((priceNow - price5mAgo.price) / price5mAgo.price) * 100;
   }
 
-  // 6. 调用 AI 生成报告
+  // 7. 调用 AI 生成报告
   const reportResult = await generateReport(env, {
     symbol,
     priceNow,
     change1m: null, // 早报不需要1分钟数据
     change5m,
     recentPrices,
+    dailyPrices, // 添加日线数据
   });
 
   if (!reportResult) {
@@ -71,7 +75,7 @@ export async function sendDailyReport(
     return;
   }
 
-  // 7. 构造消息内容
+  // 8. 构造消息内容
   const lines = [
     "📊 [AU 金价早报]",
     `时间: ${formatTs(ts)}`,
@@ -93,7 +97,7 @@ export async function sendDailyReport(
 
   const message = lines.join("\n");
 
-  // 8. 发送到飞书
+  // 9. 发送到飞书
   if (env.FEISHU_WEBHOOK) {
     const sent = await sendFeishu(env.FEISHU_WEBHOOK, message);
     if (sent) {
@@ -105,7 +109,7 @@ export async function sendDailyReport(
     console.warn("[DailyReport] FEISHU_WEBHOOK not configured, skipping send");
   }
 
-  // 9. 保存报告到数据库
+  // 10. 保存报告到数据库
   try {
     await env.DB.prepare(
       `INSERT INTO reports (symbol, ts, model, report_md, trigger_type, trigger_value)
