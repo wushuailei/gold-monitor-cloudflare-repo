@@ -13,6 +13,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
   const [side, setSide] = useState<"买" | "卖">("买");
   const [price, setPrice] = useState("");
   const [qty, setQty] = useState("");
+  const [amount, setAmount] = useState("");
   const [ts, setTs] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,10 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         setSide((initialData.side || "买") as "买" | "卖");
         setPrice(initialData.price?.toString() || "");
         setQty(initialData.qty?.toString() || "");
+        const calculatedAmount = initialData.price && initialData.qty 
+          ? (initialData.price * initialData.qty).toFixed(2)
+          : "";
+        setAmount(calculatedAmount);
         // initialData.ts 是毫秒
         setTs(initialData.ts ? new Date(initialData.ts).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
         setNote(initialData.note || "");
@@ -29,6 +34,36 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         setTs(new Date().toISOString().slice(0, 16));
     }
   }, [isOpen, initialData]);
+
+  // 当价格或数量变化时，自动计算金额
+  const handlePriceChange = (value: string) => {
+    setPrice(value);
+    if (value && qty) {
+      const calculatedAmount = (parseFloat(value) * parseFloat(qty)).toFixed(2);
+      setAmount(calculatedAmount);
+    } else {
+      setAmount("");
+    }
+  };
+
+  const handleQtyChange = (value: string) => {
+    setQty(value);
+    if (price && value) {
+      const calculatedAmount = (parseFloat(price) * parseFloat(value)).toFixed(2);
+      setAmount(calculatedAmount);
+    } else {
+      setAmount("");
+    }
+  };
+
+  // 当金额变化时，根据价格自动计算数量
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    if (value && price) {
+      const calculatedQty = (parseFloat(value) / parseFloat(price)).toFixed(2);
+      setQty(calculatedQty);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +82,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
       setSide("买");
       setPrice("");
       setQty("");
+      setAmount("");
       setNote("");
     } catch (error) {
       console.error(error);
@@ -93,10 +129,22 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
             type="number"
             step="0.01"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => handlePriceChange(e.target.value)}
             required
             placeholder="例如: 580.50"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">金额 (元)</label>
+          <Input
+            type="number"
+            step="0.01"
+            value={amount}
+            onChange={(e) => handleAmountChange(e.target.value)}
+            placeholder="输入金额自动计算数量"
+          />
+          <div className="text-xs text-gray-500 mt-1">可输入金额自动计算数量，或直接输入数量</div>
         </div>
 
         <div>
@@ -105,7 +153,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
             type="number"
             step="0.01"
             value={qty}
-            onChange={(e) => setQty(e.target.value)}
+            onChange={(e) => handleQtyChange(e.target.value)}
             required
             placeholder="例如: 10"
           />
