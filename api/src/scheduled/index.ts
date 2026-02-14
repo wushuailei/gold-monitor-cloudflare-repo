@@ -26,6 +26,20 @@ export async function handleScheduled(
   const ts = nowTs();
   const symbol = "AU";
 
+  // ── Step -1: 检查市场状态 ──
+  const globalConfig = await env.DB.prepare(
+    "SELECT market_status FROM global_configs WHERE symbol = ?",
+  )
+    .bind(symbol)
+    .first<{ market_status: string }>();
+
+  const isMarketOpen = globalConfig?.market_status === 'OPEN';
+
+  if (!isMarketOpen) {
+    console.log("[Scheduled] Market is closed, skipping price fetch and alerts");
+    // 停盘时仍然执行数据清理和早报
+  }
+
   // ── Step 0: 检查是否需要执行数据清理（每天一次） ──
   try {
     const shouldCleanup = await shouldRunCleanupToday(env, ts);
@@ -48,6 +62,11 @@ export async function handleScheduled(
   } catch (err) {
     console.error("[Scheduled] Daily report failed:", err);
     // 早报失败不影响主流程
+  }
+
+  // 如果停盘，跳过价格抓取和告警
+  if (!isMarketOpen) {
+    return;
   }
 
   // ── Step 1: 拉取金价 ──
@@ -94,24 +113,23 @@ export async function handleScheduled(
       const newMin = priceNow < existing.min_price;
 
       if (newMax || newMin) {
-        const setClauses: string[] = ["last_updated = ?3"];
+        // 构建动态 UPDATE 语句
+        const updates: string[] = ["last_updated = ?"];
+        const bindings: any[] = [symbol, todayTs, ts];
+        
         if (newMax) {
-          setClauses.push("max_price = ?4", "max_ts = ?3");
+          updates.push("max_price = ?", "max_ts = ?");
+          bindings.push(priceNow, ts);
         }
         if (newMin) {
-          setClauses.push("min_price = ?5", "min_ts = ?3");
+          updates.push("min_price = ?", "min_ts = ?");
+          bindings.push(priceNow, ts);
         }
 
         await env.DB.prepare(
-          `UPDATE daily_prices SET ${setClauses.join(", ")} WHERE symbol = ?1 AND day_ts = ?2`,
+          `UPDATE daily_prices SET ${updates.join(", ")} WHERE symbol = ? AND day_ts = ?`,
         )
-          .bind(
-            symbol,
-            todayTs,
-            ts,
-            newMax ? priceNow : existing.max_price,
-            newMin ? priceNow : existing.min_price,
-          )
+          .bind(...bindings)
           .run();
       }
     }

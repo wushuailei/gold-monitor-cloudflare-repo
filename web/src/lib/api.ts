@@ -18,6 +18,7 @@ export interface GlobalConfig {
   fall_1?: number;
   fall_2?: number;
   fall_3?: number;
+  market_status?: string;
   updated_ts: number;
 }
 

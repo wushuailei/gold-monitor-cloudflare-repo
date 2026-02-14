@@ -10,6 +10,7 @@ interface GlobalConfig {
   fall_1?: number;
   fall_2?: number;
   fall_3?: number;
+  market_status?: string;
 }
 
 interface GlobalConfigModalProps {
@@ -20,6 +21,7 @@ interface GlobalConfigModalProps {
 }
 
 export function GlobalConfigModal({ isOpen, onClose, onSubmit, currentConfig }: GlobalConfigModalProps) {
+  const [marketStatus, setMarketStatus] = useState<"OPEN" | "CLOSED">("OPEN");
   const [rise1, setRise1] = useState("");
   const [rise2, setRise2] = useState("");
   const [rise3, setRise3] = useState("");
@@ -30,6 +32,7 @@ export function GlobalConfigModal({ isOpen, onClose, onSubmit, currentConfig }: 
 
   useEffect(() => {
     if (isOpen && currentConfig) {
+      setMarketStatus((currentConfig.market_status as "OPEN" | "CLOSED") || "OPEN");
       setRise1(currentConfig.rise_1?.toString() || "");
       setRise2(currentConfig.rise_2?.toString() || "");
       setRise3(currentConfig.rise_3?.toString() || "");
@@ -45,6 +48,7 @@ export function GlobalConfigModal({ isOpen, onClose, onSubmit, currentConfig }: 
     try {
       await onSubmit({
         symbol: 'AU',
+        market_status: marketStatus,
         rise_1: rise1 ? parseFloat(rise1) : undefined,
         rise_2: rise2 ? parseFloat(rise2) : undefined,
         rise_3: rise3 ? parseFloat(rise3) : undefined,
@@ -62,11 +66,42 @@ export function GlobalConfigModal({ isOpen, onClose, onSubmit, currentConfig }: 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="全局涨跌幅告警配置">
+    <Modal isOpen={isOpen} onClose={onClose} title="全局配置">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
           <p className="font-medium mb-1">💡 全局配置说明</p>
-          <p className="text-xs">此配置对所有用户生效，设置价格相对昨日收盘价或买入价的涨跌幅告警节点。</p>
+          <p className="text-xs">此配置对所有用户生效，包括市场状态和涨跌幅告警节点。</p>
+        </div>
+
+        <div className="border-b border-gray-200 pb-4">
+          <h4 className="text-sm font-bold text-gray-900 mb-3">市场状态</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setMarketStatus("OPEN")}
+              className={`px-4 py-3 rounded-lg font-semibold transition-all border ${
+                marketStatus === "OPEN" 
+                  ? "bg-green-500 text-white border-green-500 shadow-sm" 
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              🟢 开盘
+            </button>
+            <button
+              type="button"
+              onClick={() => setMarketStatus("CLOSED")}
+              className={`px-4 py-3 rounded-lg font-semibold transition-all border ${
+                marketStatus === "CLOSED" 
+                  ? "bg-gray-500 text-white border-gray-500 shadow-sm" 
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              ⚫ 停盘
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            停盘时将暂停价格抓取和告警推送
+          </div>
         </div>
 
         <div className="border-b border-gray-200 pb-4">
