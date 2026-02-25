@@ -65,6 +65,13 @@ function App() {
     await refetch();
   };
 
+  const handleDeleteTrade = async (id: number) => {
+    if (confirm("确定要删除这条交易记录吗？删除后持仓数据将重新计算。")) {
+      await api.deleteTrade(id);
+      await refetch();
+    }
+  };
+
   const handleTargetSubmit = async (target: {
     symbol: string;
     target_price: number;
@@ -111,8 +118,8 @@ function App() {
           setSelectedTarget(undefined);
           setIsTargetModalOpen(true);
         }}
-        onOpenAddTrade={() => {
-          setSelectedTrade({});
+        onOpenAddTrade={(side) => {
+          setSelectedTrade({ side });
           setIsTradeModalOpen(true);
         }}
       />
@@ -200,6 +207,7 @@ function App() {
             holdingsQty={holdings?.total_qty || 0}
             holdingsCost={holdings?.total_cost || 0}
             holdingsRealizedProfit={holdings?.realized_profit || 0}
+            onDeleteTrade={handleDeleteTrade}
           />
         </div>
 

@@ -211,7 +211,7 @@ cd web
 
 # 2. 安装依赖并构建
 npm install
-npm run build:prod
+npm run build
 
 # 3. 部署到 Pages
 npx wrangler pages deploy dist --project-name=gold-monitor

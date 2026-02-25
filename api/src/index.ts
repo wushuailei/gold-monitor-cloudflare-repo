@@ -3,7 +3,11 @@ import { handleScheduled } from "./scheduled";
 import { handleOptions, errorResponse } from "./utils/cors";
 import { handleGetPrices } from "./routes/prices";
 import { handleGetDailyPrices } from "./routes/dailyPrices";
-import { handleGetTrades, handlePostTrade } from "./routes/trades";
+import {
+  handleGetTrades,
+  handlePostTrade,
+  handleDeleteTrade,
+} from "./routes/trades";
 import { handleGetHoldings } from "./routes/holdings";
 import { handleGetReports } from "./routes/reports";
 import { handleGetAlerts } from "./routes/alerts";
@@ -12,20 +16,31 @@ import {
   handlePostTarget,
   handleDeleteTarget,
 } from "./routes/targets";
-import { handleGetGlobalConfig, handlePostGlobalConfig } from "./routes/globalConfig";
+import {
+  handleGetGlobalConfig,
+  handlePostGlobalConfig,
+} from "./routes/globalConfig";
 import {
   handleGetUserTargets,
   handlePostUserTarget,
   handleDeleteUserTarget,
   handlePutUserTarget,
 } from "./routes/userTargets";
-import { handleTestFeishu, handleTestDailyReport, handleTestAlert } from "./routes/test";
+import {
+  handleTestFeishu,
+  handleTestDailyReport,
+  handleTestAlert,
+} from "./routes/test";
 
 export default {
   /**
    * HTTP 请求入口 — API 路由分发
    */
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -34,16 +49,18 @@ export default {
     if (env.REQUIRE_REFERER === "true") {
       const referer = request.headers.get("Referer");
       const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || [];
-      
+
       // 如果没有 Referer 头，直接拒绝
       if (!referer) {
         return errorResponse("Forbidden: Missing referer", origin, 403);
       }
-      
+
       // 验证 Referer 是否在允许列表中
       const refererOrigin = new URL(referer).origin;
-      const isAllowed = allowedOrigins.some(allowed => refererOrigin.includes(allowed));
-      
+      const isAllowed = allowedOrigins.some((allowed) =>
+        refererOrigin.includes(allowed),
+      );
+
       if (!isAllowed && allowedOrigins.length > 0) {
         return errorResponse("Forbidden: Invalid referer", origin, 403);
       }
@@ -66,6 +83,12 @@ export default {
     if (path === "/api/trades") {
       if (method === "GET") return handleGetTrades(request, env, origin);
       if (method === "POST") return handlePostTrade(request, env, origin);
+    }
+
+    // DELETE /api/trades/:id
+    const tradeMatch = path.match(/^\/api\/trades\/(\d+)$/);
+    if (tradeMatch && method === "DELETE") {
+      return handleDeleteTrade(tradeMatch[1], env, origin);
     }
 
     if (path === "/api/holdings" && method === "GET") {
@@ -94,7 +117,8 @@ export default {
     // 全局配置 API
     if (path === "/api/global-config") {
       if (method === "GET") return handleGetGlobalConfig(request, env, origin);
-      if (method === "POST") return handlePostGlobalConfig(request, env, origin);
+      if (method === "POST")
+        return handlePostGlobalConfig(request, env, origin);
     }
 
     // 用户目标价 API
@@ -107,8 +131,10 @@ export default {
     // DELETE /api/user-targets/:id
     const userTargetMatch = path.match(/^\/api\/user-targets\/(\d+)$/);
     if (userTargetMatch) {
-      if (method === "PUT") return handlePutUserTarget(userTargetMatch[1], request, env, origin);
-      if (method === "DELETE") return handleDeleteUserTarget(userTargetMatch[1], env, origin);
+      if (method === "PUT")
+        return handlePutUserTarget(userTargetMatch[1], request, env, origin);
+      if (method === "DELETE")
+        return handleDeleteUserTarget(userTargetMatch[1], env, origin);
     }
 
     // 测试接口

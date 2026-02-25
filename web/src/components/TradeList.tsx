@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { Trade } from "../types";
-import { TrendingUp, TrendingDown, Coins } from "lucide-react";
+import { TrendingUp, TrendingDown, Coins, Trash2 } from "lucide-react";
 
 interface TradeListProps {
   trades: Trade[];
@@ -9,9 +9,10 @@ interface TradeListProps {
   holdingsQty?: number;
   holdingsCost?: number;
   holdingsRealizedProfit?: number;
+  onDeleteTrade?: (id: number) => Promise<void>;
 }
 
-export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, holdingsQty = 0, holdingsCost = 0, holdingsRealizedProfit = 0 }: TradeListProps) {
+export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, holdingsQty = 0, holdingsCost = 0, holdingsRealizedProfit = 0, onDeleteTrade }: TradeListProps) {
   if (trades.length === 0) {
     return (
       <div>
@@ -127,6 +128,7 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">数量</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">金额</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">备注</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -203,6 +205,17 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
                     {trade.note || '-'}
+                  </td>
+                  <td className="py-3 px-4">
+                    {onDeleteTrade && trade.id && (
+                      <button
+                        onClick={() => onDeleteTrade(trade.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="删除"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

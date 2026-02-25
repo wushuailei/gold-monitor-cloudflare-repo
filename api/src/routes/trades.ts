@@ -1,6 +1,6 @@
 import type { Env } from "../types";
 import { jsonResponse, errorResponse } from "../utils/cors";
-import { updateHolding } from "./holdings";
+import { updateHolding, recalculateHolding } from "./holdings";
 
 /**
  * GET /api/trades?from=ts1&to=ts2
@@ -16,7 +16,7 @@ export async function handleGetTrades(
   const now = Math.floor(Date.now() / 1000);
   const from = parseInt(url.searchParams.get("from") || "") || now - 7 * 86400; // 默认 7 天
   const to = parseInt(url.searchParams.get("to") || "") || now;
-  
+
   // 限制最多查询 360 天
   const maxFrom = now - 360 * 86400;
   const actualFrom = Math.max(from, maxFrom);
@@ -74,9 +74,54 @@ export async function handlePostTrade(
 
       return jsonResponse({ success: true }, origin, 201);
     } catch (err: any) {
-      return errorResponse(err.message || "Failed to create trade", origin, 400);
+      return errorResponse(
+        err.message || "Failed to create trade",
+        origin,
+        400,
+      );
     }
   } catch (err) {
     return errorResponse("Invalid request body", origin);
+  }
+}
+
+/**
+ * DELETE /api/trades/:id
+ *
+ * 删除买卖点记录，并重新计算持仓
+ */
+export async function handleDeleteTrade(
+  id: string,
+  env: Env,
+  origin?: string,
+): Promise<Response> {
+  try {
+    const tradeId = parseInt(id);
+    if (isNaN(tradeId)) {
+      return errorResponse("Invalid trade ID", origin, 400);
+    }
+
+    const symbol = "AU"; // 目前默认只处理 AU
+
+    // 获取要删除的交易记录，验证是否存在
+    const existingTrade = await env.DB.prepare(
+      "SELECT * FROM trades WHERE id = ? AND symbol = ?",
+    )
+      .bind(tradeId, symbol)
+      .first();
+
+    if (!existingTrade) {
+      return errorResponse("Trade not found", origin, 404);
+    }
+
+    // 删除交易记录
+    await env.DB.prepare("DELETE FROM trades WHERE id = ?").bind(tradeId).run();
+
+    // 重新计算持仓
+    await recalculateHolding(env.DB, symbol);
+
+    return jsonResponse({ success: true }, origin);
+  } catch (err: any) {
+    return errorResponse(err.message || "Failed to delete trade", origin, 500);
   }
 }

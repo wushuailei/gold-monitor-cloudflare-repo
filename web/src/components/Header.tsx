@@ -6,7 +6,7 @@ interface HeaderProps {
   onOpenGlobalConfig: () => void;
   onOpenTest: () => void;
   onOpenAddTarget: () => void;
-  onOpenAddTrade: () => void;
+  onOpenAddTrade: (side: "买" | "卖") => void;
 }
 
 export function Header({
@@ -48,19 +48,27 @@ export function Header({
           </button>
           <button
             onClick={onOpenTest}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+            className="hidden px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
             title="测试发送"
           >
             <Send size={16} />
             测试发送
           </button>
           <button
-            onClick={onOpenAddTrade}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
-            title="记录交易"
+            onClick={() => onOpenAddTrade("买")}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+            title="买入"
           >
             <DollarSign size={16} />
-            记录交易
+            买入
+          </button>
+          <button
+            onClick={() => onOpenAddTrade("卖")}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+            title="卖出"
+          >
+            <DollarSign size={16} />
+            卖出
           </button>
           <button
             onClick={onOpenAddTarget}

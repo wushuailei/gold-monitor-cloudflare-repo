@@ -68,7 +68,18 @@ export const api = {
     if (!res.ok) throw new Error("Failed to create trade");
   },
 
-  async getReports(days: number = 7, limit = 50, offset = 0): Promise<Report[]> {
+  async deleteTrade(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/trades/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete trade");
+  },
+
+  async getReports(
+    days: number = 7,
+    limit = 50,
+    offset = 0,
+  ): Promise<Report[]> {
     const now = Math.floor(Date.now() / 1000);
     const from = now - days * 86400;
     const res = await fetch(
@@ -117,7 +128,9 @@ export const api = {
     return res.json();
   },
 
-  async updateGlobalConfig(config: Omit<GlobalConfig, "id" | "updated_ts">): Promise<void> {
+  async updateGlobalConfig(
+    config: Omit<GlobalConfig, "id" | "updated_ts">,
+  ): Promise<void> {
     const res = await fetch(`${API_BASE}/global-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -133,7 +146,11 @@ export const api = {
     return res.json();
   },
 
-  async createUserTarget(target: { symbol: string; target_price: number; target_cmp: string }): Promise<void> {
+  async createUserTarget(target: {
+    symbol: string;
+    target_price: number;
+    target_cmp: string;
+  }): Promise<void> {
     const res = await fetch(`${API_BASE}/user-targets`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -142,7 +159,10 @@ export const api = {
     if (!res.ok) throw new Error("Failed to create user target");
   },
 
-  async updateUserTarget(id: number, target: { target_price: number; target_cmp: string; target_alert: number }): Promise<void> {
+  async updateUserTarget(
+    id: number,
+    target: { target_price: number; target_cmp: string; target_alert: number },
+  ): Promise<void> {
     const res = await fetch(`${API_BASE}/user-targets/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

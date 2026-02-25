@@ -21,14 +21,17 @@ export async function handleGetHoldings(
 
   if (!holding) {
     // 如果没有记录，返回空持仓
-    return jsonResponse({
-      symbol,
-      total_qty: 0,
-      total_cost: 0,
-      avg_price: 0,
-      realized_profit: 0,
-      updated_ts: Math.floor(Date.now() / 1000),
-    }, origin);
+    return jsonResponse(
+      {
+        symbol,
+        total_qty: 0,
+        total_cost: 0,
+        avg_price: 0,
+        realized_profit: 0,
+        updated_ts: Math.floor(Date.now() / 1000),
+      },
+      origin,
+    );
   }
 
   return jsonResponse(holding, origin);
@@ -72,12 +75,12 @@ export async function updateHolding(
     if (newQty < qty) {
       throw new Error(`持仓不足：当前持仓 ${newQty} 克，卖出 ${qty} 克`);
     }
-    
+
     // 计算已实现盈亏：(卖出价 - 平均成本) * 卖出数量
     const avgPrice = holding?.avg_price || 0;
     const profitFromSale = (price - avgPrice) * qty;
     newRealizedProfit += profitFromSale;
-    
+
     newQty -= qty;
     // 按平均成本减少总成本
     newCost -= avgPrice * qty;
@@ -97,5 +100,60 @@ export async function updateHolding(
          updated_ts = excluded.updated_ts`,
     )
     .bind(symbol, newQty, newCost, newAvgPrice, newRealizedProfit, now)
+    .run();
+}
+
+/**
+ * 重新计算持仓（在删除或修改交易时调用）
+ */
+export async function recalculateHolding(
+  db: D1Database,
+  symbol: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+
+  // 获取所有剩余的交易记录，按时间升序
+  const trades = await db
+    .prepare("SELECT * FROM trades WHERE symbol = ? ORDER BY ts ASC")
+    .bind(symbol)
+    .all<{
+      id: number;
+      ts: number;
+      side: string;
+      price: number;
+      qty: number;
+    }>();
+
+  let totalQty = 0;
+  let totalCost = 0;
+  let realizedProfit = 0;
+
+  for (const trade of trades.results) {
+    if (trade.side === "买") {
+      totalQty += trade.qty;
+      totalCost += trade.price * trade.qty;
+    } else if (trade.side === "卖") {
+      const avgPrice = totalQty > 0 ? totalCost / totalQty : 0;
+      realizedProfit += (trade.price - avgPrice) * trade.qty;
+      totalQty -= trade.qty;
+      totalCost -= avgPrice * trade.qty;
+    }
+  }
+
+  const avgPrice = totalQty > 0 ? totalCost / totalQty : 0;
+
+  // 更新持仓表
+  await db
+    .prepare(
+      `INSERT INTO holdings (symbol, total_qty, total_cost, avg_price, realized_profit, updated_ts)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(symbol) DO UPDATE SET
+         total_qty = excluded.total_qty,
+         total_cost = excluded.total_cost,
+         avg_price = excluded.avg_price,
+         realized_profit = excluded.realized_profit,
+         updated_ts = excluded.updated_ts`,
+    )
+    .bind(symbol, totalQty, totalCost, avgPrice, realizedProfit, now)
     .run();
 }
