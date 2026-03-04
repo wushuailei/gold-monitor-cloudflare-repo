@@ -7,6 +7,5 @@ export const utcToBeijingTs = (utcTs: number): number => {
 
 // 将 UTC 时间戳格式化为北京时间字符串
 export const formatBeijingDate = (utcTs: number, formatStr: string): string => {
-  const beijingTs = utcToBeijingTs(utcTs);
-  return format(new Date(beijingTs * 1000), formatStr);
+  return format(new Date(utcTs * 1000), formatStr);
 };

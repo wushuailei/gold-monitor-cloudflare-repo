@@ -1,6 +1,7 @@
 import type { Env } from "../types";
 import { sendFeishu, buildPriceLevelMessage } from "../services/feishu";
 
+const PRICE_DIFF_THRESHOLD = 5;
 const PRICE_LEVEL_STEP = 10;
 const MAX_ALERTS_PER_CHECK = 30;
 
@@ -34,7 +35,7 @@ export async function checkPriceLevels(
     return;
   }
 
-  if (Math.abs(priceNow - lastPrice) < PRICE_LEVEL_STEP) {
+  if (Math.abs(priceNow - lastPrice) < PRICE_DIFF_THRESHOLD) {
     return;
   }
 
@@ -48,7 +49,7 @@ export async function checkPriceLevels(
       alerts.push({ level, direction: "UP" });
     }
   } else if (priceNow < lastPrice) {
-    for (let level = prevLevel - PRICE_LEVEL_STEP; level >= currLevel; level -= PRICE_LEVEL_STEP) {
+    for (let level = prevLevel - PRICE_LEVEL_STEP; level > currLevel; level -= PRICE_LEVEL_STEP) {
       alerts.push({ level, direction: "DOWN" });
     }
   }
@@ -62,10 +63,24 @@ export async function checkPriceLevels(
     return;
   }
 
-  if (alerts.length > MAX_ALERTS_PER_CHECK) {
-    console.error(
-      `[PriceLevel] Too many alerts (${alerts.length}), skipping. prevLevel=${prevLevel}, currLevel=${currLevel}`
-    );
+  // 查询最近 5 条记录，避免重复告警同一关口
+  const recentRecords = await env.DB.prepare(
+    "SELECT price_level FROM price_levels WHERE symbol = ? ORDER BY ts DESC LIMIT 5",
+  )
+    .bind(symbol)
+    .all<{ price_level: number }>();
+
+  const recentLevels = new Set<number>();
+  for (const r of recentRecords.results || []) {
+    recentLevels.add(r.price_level);
+  }
+  const recentLevel = recentLevels.size === 1 ? [...recentLevels][0] : null;
+
+  // 过滤掉最近已告警的关口
+  const filteredAlerts = alerts.filter((a) => a.level !== recentLevel);
+
+  if (filteredAlerts.length === 0) {
+    console.log("[PriceLevel] All alerts filtered, skipping duplicate levels");
     await env.DB.prepare(
       "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
     )
@@ -74,7 +89,18 @@ export async function checkPriceLevels(
     return;
   }
 
-  for (const alert of alerts) {
+  let finalAlerts: { level: number; direction: string }[] = filteredAlerts;
+
+  if (filteredAlerts.length > MAX_ALERTS_PER_CHECK) {
+    const first5 = filteredAlerts.slice(0, 5);
+    const last5 = filteredAlerts.slice(-5);
+    finalAlerts = [...first5, ...last5];
+    console.log(
+      `[PriceLevel] Too many alerts (${filteredAlerts.length}), sending first 5 and last 5. prevLevel=${prevLevel}, currLevel=${currLevel}`
+    );
+  }
+
+  for (const alert of finalAlerts) {
     let status = "SENT";
     let error: string | null = null;
 

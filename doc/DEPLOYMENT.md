@@ -154,6 +154,7 @@ npx wrangler d1 execute au_gold_db --remote --file=migrations/0012_simplify_hold
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0013_add_open_close_price.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0014_add_alert_count_to_user_targets.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0015_add_price_level_alert.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0016_add_price_level_alert_direction_idx.sql
 ```
 
 ### 2. 验证数据库

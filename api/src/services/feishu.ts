@@ -45,7 +45,7 @@ export function buildNodeAlertMessage(
   nodeLevel: number,
   createdBy: string,
 ): string {
-  const icon = alertType === "RISE" ? "�" : "�";
+  const icon = alertType === "RISE" ? "🔴" : "🟢";
   const arrow = alertType === "RISE" ? "⬆️" : "⬇️";
   const typeLabel = alertType === "RISE" ? "涨幅" : "跌幅";
   const baseLabel = BASE_LABELS[baseType] || baseType;
@@ -115,7 +115,7 @@ export function buildPriceLevelMessage(
   symbol: string,
 ): string {
   const isUp = direction === "UP";
-  const icon = isUp ? "�" : "�";
+  const icon = isUp ? "🔴" : "🟢";
   const arrow = isUp ? "⬆️" : "⬇️";
   const action = isUp ? "突破" : "跌破";
   const barrier = isUp ? "━━━⬆️━━━" : "━━━⬇️━━━";

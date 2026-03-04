@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS price_levels (
 
 CREATE INDEX idx_price_levels_symbol_ts ON price_levels(symbol, ts);
 CREATE INDEX idx_price_levels_ts ON price_levels(ts);
+CREATE INDEX idx_price_levels_direction_ts ON price_levels(direction, ts DESC);
