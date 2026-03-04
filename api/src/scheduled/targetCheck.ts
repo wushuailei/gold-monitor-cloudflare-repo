@@ -7,6 +7,7 @@ interface TargetConfig {
   target_price: number;
   target_alert: number;
   target_cmp: string; // 'EQ' | 'GTE' | 'LTE'
+  alert_count: number;
 }
 
 /**
@@ -31,7 +32,7 @@ export async function checkTargets(
 ): Promise<void> {
   // 查询所有开启目标价提醒的配置
   const result = await env.DB.prepare(
-    `SELECT id, symbol, target_price, target_alert, target_cmp
+    `SELECT id, symbol, target_price, target_alert, target_cmp, alert_count
      FROM user_targets
      WHERE symbol = ? AND target_alert = 1`,
   )
@@ -66,19 +67,22 @@ export async function checkTargets(
       error = "FEISHU_WEBHOOK not configured";
     }
 
-    // 写入 alerts + 关闭提醒（batch）
+    // 写入 alerts + 更新提醒次数（batch）
+    const newAlertCount = t.alert_count + 1;
+    const shouldDisable = newAlertCount >= 3;
+
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO alerts (ts, symbol, created_by, alert_type, base_type, node_level, price, ref_price, change_percent, status, error)
          VALUES (?, ?, 'user', 'TARGET', 'TARGET', 0, ?, ?, NULL, ?, ?)`,
       ).bind(ts, symbol, priceNow, t.target_price, status, error),
       env.DB.prepare(
-        `UPDATE user_targets SET target_alert = 0 WHERE id = ?`,
-      ).bind(t.id),
+        `UPDATE user_targets SET alert_count = ?, target_alert = ? WHERE id = ?`,
+      ).bind(newAlertCount, shouldDisable ? 0 : 1, t.id),
     ]);
 
     console.log(
-      `[TargetCheck] target=${t.target_price} cmp=${t.target_cmp} price=${priceNow} → ${status}`,
+      `[TargetCheck] target=${t.target_price} cmp=${t.target_cmp} price=${priceNow} alert_count=${newAlertCount} → ${status}`,
     );
   }
 }

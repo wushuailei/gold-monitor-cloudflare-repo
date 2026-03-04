@@ -14,6 +14,7 @@ import { ReportList } from "../components/ReportList";
 import { AlertList } from "../components/AlertList";
 import { TradeList } from "../components/TradeList";
 import { DailyPriceList } from "../components/DailyPriceList";
+import { PriceLevelList } from "../components/PriceLevelList";
 import { DateRangeSelector } from "../components/DateRangeSelector";
 import { TargetManagement } from "../components/TargetManagement";
 import { GlobalConfigDisplay } from "../components/GlobalConfigDisplay";
@@ -25,6 +26,7 @@ function App() {
   const [tradeDays, setTradeDays] = useState(7);
   const [alertDays, setAlertDays] = useState(7);
   const [reportDays, setReportDays] = useState(7);
+  const [priceLevelDays, setPriceLevelDays] = useState(7);
 
   // 获取数据
   const {
@@ -33,13 +35,14 @@ function App() {
     trades,
     reports,
     alerts,
+    priceLevels,
     configs,
     globalConfig,
     userTargets,
     holdings,
     loading,
     refetch,
-  } = useGoldData(chartHours, dailyDays, tradeDays, alertDays, reportDays);
+  } = useGoldData(chartHours, dailyDays, tradeDays, alertDays, reportDays, priceLevelDays);
 
   // 弹窗状态
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
@@ -55,9 +58,10 @@ function App() {
   const prevPrice = prices.length > 1 ? prices[prices.length - 2].price : latestPrice;
   const priceChange = latestPrice - prevPrice;
   const priceChangePercent = prevPrice > 0 ? (priceChange / prevPrice) * 100 : 0;
-  const highPrice = prices.length > 0 ? Math.max(...prices.map((p) => p.price)) : 0;
-  const lowPrice = prices.length > 0 ? Math.min(...prices.map((p) => p.price)) : 0;
-  const priceRange = highPrice - lowPrice;
+
+  // 获取昨日日线数据（按 day_ts 倒序排列后的第二条，因为第一条是今天）
+  const sortedDailyPrices = [...dailyPrices].sort((a, b) => b.day_ts - a.day_ts);
+  const yesterdayDaily = sortedDailyPrices.length > 1 ? sortedDailyPrices[1] : sortedDailyPrices[0];
 
   // 事件处理
   const handleTradeSubmit = async (trade: Omit<Trade, "id">) => {
@@ -131,9 +135,7 @@ function App() {
           latestXauPrice={latestXauPrice}
           priceChange={priceChange}
           priceChangePercent={priceChangePercent}
-          highPrice={highPrice}
-          lowPrice={lowPrice}
-          priceRange={priceRange}
+          yesterdayDaily={yesterdayDaily}
         />
 
         {/* Stats Cards */}
@@ -193,6 +195,14 @@ function App() {
             <DateRangeSelector value={alertDays} onChange={setAlertDays} />
           </div>
           <AlertList alerts={alerts} />
+        </div>
+
+        {/* Price Levels Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="mb-4 flex justify-end">
+            <DateRangeSelector value={priceLevelDays} onChange={setPriceLevelDays} />
+          </div>
+          <PriceLevelList priceLevels={priceLevels} />
         </div>
 
         {/* Trades Table */}

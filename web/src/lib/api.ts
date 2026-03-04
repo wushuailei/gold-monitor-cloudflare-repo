@@ -5,9 +5,10 @@ import {
   Alert,
   UserConfig,
   DailyPrice,
+  PriceLevel,
 } from "../types";
 
-export interface Trade extends TradeType {}
+export type Trade = TradeType;
 
 export interface GlobalConfig {
   id: number;
@@ -28,6 +29,7 @@ export interface UserTarget {
   target_price: number;
   target_alert: number;
   target_cmp: string;
+  alert_count: number;
   created_ts: number;
   updated_ts: number;
 }
@@ -94,6 +96,14 @@ export const api = {
     const from = now - days * 86400;
     const res = await fetch(`${API_BASE}/alerts?from=${from}&to=${now}`);
     if (!res.ok) throw new Error("Failed to fetch alerts");
+    return res.json();
+  },
+
+  async getPriceLevels(days: number = 7): Promise<PriceLevel[]> {
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - days * 86400;
+    const res = await fetch(`${API_BASE}/price-levels?from=${from}&to=${now}`);
+    if (!res.ok) throw new Error("Failed to fetch price levels");
     return res.json();
   },
 

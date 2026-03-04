@@ -40,8 +40,8 @@ export async function handlePostUserTarget(
   const now = Math.floor(Date.now() / 1000);
 
   await env.DB.prepare(
-    `INSERT INTO user_targets (symbol, target_price, target_alert, target_cmp, created_ts, updated_ts)
-     VALUES (?, ?, 1, ?, ?, ?)`,
+    `INSERT INTO user_targets (symbol, target_price, target_alert, target_cmp, alert_count, created_ts, updated_ts)
+     VALUES (?, ?, 1, ?, 0, ?, ?)`,
   )
     .bind(
       body.symbol,
@@ -89,9 +89,12 @@ export async function handlePutUserTarget(
 
   const now = Math.floor(Date.now() / 1000);
 
+  // 如果重新开启提醒，重置 alert_count
+  const alertCountReset = body.target_alert === 1 ? ", alert_count = 0" : "";
+
   await env.DB.prepare(
     `UPDATE user_targets 
-     SET target_price = ?, target_cmp = ?, target_alert = ?, updated_ts = ?
+     SET target_price = ?, target_cmp = ?, target_alert = ?, updated_ts = ?${alertCountReset}
      WHERE id = ?`,
   )
     .bind(

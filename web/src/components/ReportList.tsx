@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { Report } from "../types";
 import { useState } from "react";
+import { formatBeijingDate } from "../utils/time";
 import { Sparkles, Eye } from "lucide-react";
 
 interface ReportListProps {
@@ -53,7 +53,7 @@ export function ReportList({ reports }: ReportListProps) {
             {reports.map((report) => (
               <tr key={report.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="py-3 px-4 text-sm text-gray-600">
-                  {format(report.ts * 1000, "MM月dd日 HH:mm")}
+                  {formatBeijingDate(report.ts, "MM月dd日 HH:mm")}
                 </td>
                 <td className="py-3 px-4">
                   <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">
@@ -105,7 +105,7 @@ export function ReportList({ reports }: ReportListProps) {
                 </button>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                <span>{format(selectedReport.ts * 1000, "yyyy-MM-dd HH:mm:ss")}</span>
+                <span>{formatBeijingDate(selectedReport.ts, "yyyy-MM-dd HH:mm:ss")}</span>
                 <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">
                   {selectedReport.symbol}
                 </span>

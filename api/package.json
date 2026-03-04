@@ -32,5 +32,8 @@
     "seed": "wrangler d1 execute DB --local --file=./seeds/seed.sql",
     "setup": "pnpm migrate && pnpm seed",
     "clean": "wrangler d1 execute DB --local --command=\"DELETE FROM prices; DELETE FROM daily_prices; DELETE FROM trades; DELETE FROM user_targets; DELETE FROM alerts; DELETE FROM reports;\""
+  },
+  "dependencies": {
+    "openai": "^4.104.0"
   }
 }

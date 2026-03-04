@@ -66,9 +66,24 @@ export interface DailyPrice {
   id: number;
   symbol: string;
   day_ts: number;
+  open_price?: number;
+  open_ts?: number;
+  close_price?: number;
+  close_ts?: number;
   max_price: number;
   min_price: number;
   max_ts: number;
   min_ts: number;
   last_updated: number;
+}
+
+export interface PriceLevel {
+  id: number;
+  ts: number;
+  symbol: string;
+  price_level: number;
+  direction: string; // UP/DOWN
+  price: number;
+  status?: string;
+  error?: string;
 }

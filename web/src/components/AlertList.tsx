@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { Alert } from "../types";
+import { formatBeijingDate } from "../utils/time";
 import { Bell, TrendingUp, TrendingDown, Target } from "lucide-react";
 
 interface AlertListProps {
@@ -85,7 +85,7 @@ export function AlertList({ alerts }: AlertListProps) {
               return (
                 <tr key={alert.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {format(alert.ts * 1000, "MM-dd HH:mm")}
+                    {formatBeijingDate(alert.ts, "MM-dd HH:mm")}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export function AlertList({ alerts }: AlertListProps) {
                     )}
                   </td>
                   <td className="py-3 px-4">
-                    {alert.change_percent !== undefined && (
+                    {alert.change_percent != null && !isNaN(alert.change_percent) && alert.change_percent !== undefined && (
                       <span className={`font-semibold text-sm ${alert.change_percent >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {alert.change_percent >= 0 ? '+' : ''}{alert.change_percent.toFixed(2)}%
                       </span>

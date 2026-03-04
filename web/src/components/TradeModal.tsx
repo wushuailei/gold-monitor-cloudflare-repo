@@ -13,7 +13,6 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
   const [side, setSide] = useState<"买" | "卖">("买");
   const [price, setPrice] = useState("");
   const [qty, setQty] = useState("");
-  const [amount, setAmount] = useState("");
   const [ts, setTs] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,11 +22,6 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         setSide((initialData.side || "买") as "买" | "卖");
         setPrice(initialData.price?.toString() || "");
         setQty(initialData.qty?.toString() || "");
-        const calculatedAmount = initialData.price && initialData.qty 
-          ? (initialData.price * initialData.qty).toFixed(2)
-          : "";
-        setAmount(calculatedAmount);
-        // initialData.ts 是毫秒
         setTs(initialData.ts ? new Date(initialData.ts).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
         setNote(initialData.note || "");
     } else if (isOpen) {
@@ -35,32 +29,14 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
     }
   }, [isOpen, initialData]);
 
-  // 当数量变化时，如果已有金额，自动计算价格
-  const handleQtyChange = (value: string) => {
-    setQty(value);
-    if (amount && value && parseFloat(value) > 0) {
-      const calculatedPrice = (parseFloat(amount) / parseFloat(value)).toFixed(2);
-      setPrice(calculatedPrice);
-    } else {
-      setPrice("");
-    }
-  };
-
-  // 当金额变化时，如果已有数量，自动计算价格
-  const handleAmountChange = (value: string) => {
-    setAmount(value);
-    if (value && qty && parseFloat(qty) > 0) {
-      const calculatedPrice = (parseFloat(value) / parseFloat(qty)).toFixed(2);
-      setPrice(calculatedPrice);
-    } else {
-      setPrice("");
-    }
-  };
+  const amount = price && qty && parseFloat(price) > 0 && parseFloat(qty) > 0
+    ? (parseFloat(price) * parseFloat(qty)).toFixed(2)
+    : "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!price || parseFloat(price) <= 0) {
-      alert("请输入有效的金额和克数");
+    if (!price || parseFloat(price) <= 0 || !qty || parseFloat(qty) <= 0) {
+      alert("请输入有效的克价和克数");
       return;
     }
     
@@ -75,11 +51,9 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         note: note || undefined,
       });
       onClose();
-      // Reset form
       setSide("买");
       setPrice("");
       setQty("");
-      setAmount("");
       setNote("");
     } catch (error) {
       console.error(error);
@@ -121,39 +95,38 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">交易金额 (元)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">克价 (元/克)</label>
           <Input
             type="number"
             step="0.01"
-            value={amount}
-            onChange={(e) => handleAmountChange(e.target.value)}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             required
-            placeholder="例如: 5000"
+            placeholder="例如: 580.50"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">黄金克数 (克)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">克数 (克)</label>
           <Input
             type="number"
             step="0.01"
             value={qty}
-            onChange={(e) => handleQtyChange(e.target.value)}
+            onChange={(e) => setQty(e.target.value)}
             required
             placeholder="例如: 10"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">自动计算克价 (元/克)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">成交金额 (元)</label>
           <Input
-            type="number"
-            value={price}
+            type="text"
+            value={amount || "-"}
             disabled
-            className="bg-gray-50 text-gray-500 font-mono"
-            placeholder="自动计算"
+            className="bg-gray-50 text-gray-600 font-mono"
           />
-          <div className="text-xs text-gray-500 mt-1">根据金额和克数自动计算得出，提交时作为成交克价。</div>
+          <div className="text-xs text-gray-500 mt-1">金额 = 克价 × 克数</div>
         </div>
 
         <div>
@@ -177,7 +150,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData }: TradeModa
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
           <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-          <Button type="submit" disabled={loading || !price || parseFloat(price) <= 0}>
+          <Button type="submit" disabled={loading || !price || parseFloat(price) <= 0 || !qty || parseFloat(qty) <= 0}>
             {loading ? "保存中..." : "保存交易"}
           </Button>
         </div>

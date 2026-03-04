@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, Time, LineSeries } from "lightweight-charts";
 import { PricePoint, Trade, UserConfig } from "../types";
+import { utcToBeijingTs } from "../utils/time";
 
 interface GoldChartProps {
   data: PricePoint[];
@@ -74,7 +75,7 @@ export function GoldChart({ data, trades, configs, onChartClick }: GoldChartProp
 
     const formattedData = data
         .map((d) => ({
-            time: d.ts as Time,
+            time: utcToBeijingTs(d.ts) as Time, // 转换为北京时间
             value: d.price,
         }))
         .sort((a, b) => (a.time as number) - (b.time as number));
@@ -85,7 +86,7 @@ export function GoldChart({ data, trades, configs, onChartClick }: GoldChartProp
     const markers: any[] = [];
     trades.forEach((t) => {
       markers.push({
-        time: t.ts as Time,
+        time: utcToBeijingTs(t.ts) as Time, // 转换为北京时间
         position: t.side === "买" ? "belowBar" : "aboveBar",
         color: t.side === "买" ? "#10B981" : "#EF4444",
         shape: t.side === "买" ? "arrowUp" : "arrowDown",

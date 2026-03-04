@@ -11,6 +11,7 @@ import {
 import { handleGetHoldings } from "./routes/holdings";
 import { handleGetReports } from "./routes/reports";
 import { handleGetAlerts } from "./routes/alerts";
+import { handleGetPriceLevels } from "./routes/priceLevels";
 import {
   handleGetTargets,
   handlePostTarget,
@@ -101,6 +102,10 @@ export default {
 
     if (path === "/api/alerts" && method === "GET") {
       return handleGetAlerts(request, env, origin);
+    }
+
+    if (path === "/api/price-levels" && method === "GET") {
+      return handleGetPriceLevels(request, env, origin);
     }
 
     if (path === "/api/targets") {

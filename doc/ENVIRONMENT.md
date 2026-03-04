@@ -9,9 +9,9 @@
 | 变量名 | 必填 | 本地配置 | 生产配置 | 说明 |
 |--------|------|----------|----------|------|
 | `FEISHU_WEBHOOK` | ✅ | `.dev.vars` | Cloudflare Secret | 飞书群机器人地址 |
-| `AI_API_KEY` | ❌ | `.dev.vars` | Cloudflare Secret | AI 服务密钥（需要 AI 功能时） |
-| `AI_API_URL` | ❌ | `wrangler.json` | `wrangler.json` | AI 服务地址 |
-| `AI_MODEL` | ❌ | `wrangler.json` | `wrangler.json` | AI 模型名称 |
+| `AI_API_KEY` | ❌ | `.dev.vars` | Cloudflare Secret | 阿里云百炼 API Key（需要 AI 功能时） |
+| `AI_API_URL` | ❌ | `wrangler.json` | `wrangler.json` | 阿里云百炼 API 地址（默认已配置） |
+| `AI_MODEL` | ❌ | `wrangler.json` | `wrangler.json` | AI 模型名称（默认 glm-5） |
 | `REQUIRE_REFERER` | ❌ | `.dev.vars` | Dashboard Variable | 启用 Referer 检查（推荐设为 `true`） |
 | `ALLOWED_ORIGINS` | ❌ | `.dev.vars` | Dashboard Variable | 允许的来源域名（逗号分隔） |
 | `CORS_ORIGIN` | ❌ | `.dev.vars` | Dashboard Variable | 跨域源（前后端分离时） |
@@ -56,16 +56,23 @@ CORS_ORIGIN=http://localhost:5173
 
 #### 步骤 3：编辑 wrangler.json（可选）
 
-如果需要测试 AI 功能，在 `vars` 字段中配置：
+AI 功能默认使用阿里云百炼 API，已在 `wrangler.json` 中配置：
 
 ```json
 {
   "vars": {
-    "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-    "AI_MODEL": "gpt-4o-mini"
+    "AI_API_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "AI_MODEL": "glm-5"
   }
 }
 ```
+
+**注意**：`AI_API_URL` 是 API 的基础地址，OpenAI SDK 会自动拼接 `/chat/completions`。
+
+如需使用其他模型，可修改 `AI_MODEL` 为：
+- `glm-5`（默认，推荐）
+- `qwen-turbo`（更快，成本更低）
+- `qwen-max`（更强，成本更高）
 
 #### 步骤 4：启动开发服务器
 
@@ -175,7 +182,7 @@ npx wrangler secret put AI_API_KEY
 | 变量名 | 类型 | 值 | 必填 |
 |--------|------|-----|------|
 | `FEISHU_WEBHOOK` | Secret | `https://open.feishu.cn/open-apis/bot/v2/hook/xxx` | ✅ 必填 |
-| `AI_API_KEY` | Secret | `sk-your-api-key` | ❌ 可选（需要 AI 功能时） |
+| `AI_API_KEY` | Secret | `sk-xxx`（阿里云百炼 API Key） | ❌ 可选（需要 AI 功能时） |
 | `REQUIRE_REFERER` | Variable | `true` | ❌ 推荐（启用安全检查） |
 | `ALLOWED_ORIGINS` | Variable | `gold-monitor.pages.dev,your-domain.com` | ❌ 推荐（配合 Referer 检查） |
 
@@ -190,11 +197,14 @@ npx wrangler secret put AI_API_KEY
 ```json
 {
   "vars": {
-    "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-    "AI_MODEL": "gpt-4o-mini",
+    "AI_API_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "AI_MODEL": "qwen-plus"
   }
 }
 ```
+
+**可选模型**：
+- `glm-5`（默认，推荐）
 
 ### 4. 运行数据库迁移
 
@@ -292,21 +302,27 @@ FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 npx wrangler secret put FEISHU_WEBHOOK
 ```
 
+**功能说明**：
+- 涨跌幅节点告警
+- 目标价提醒（每个目标价最多 3 次）
+- 整数关口突破/跌破提醒
+- 每日早报（需配置 AI）
+
 ### 场景 2：使用完整功能（包括 AI）
 
 **本地**：
 ```env
 # api/.dev.vars
 FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
-AI_API_KEY=sk-xxx
+AI_API_KEY=sk-xxx（阿里云百炼 API Key）
 ```
 
 ```json
-// api/wrangler.json
+// api/wrangler.json（已默认配置）
 {
   "vars": {
-    "AI_API_URL": "https://api.openai.com/v1/chat/completions",
-    "AI_MODEL": "gpt-4o-mini"
+    "AI_API_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "AI_MODEL": "glm-5"
   }
 }
 ```
@@ -316,6 +332,11 @@ AI_API_KEY=sk-xxx
 npx wrangler secret put FEISHU_WEBHOOK
 npx wrangler secret put AI_API_KEY
 ```
+
+**获取阿里云百炼 API Key**：
+1. 访问 [阿里云百炼控制台](https://bailian.console.aliyun.com/)
+2. 开通服务并创建 API Key
+3. 复制 API Key 用于配置
 
 ### 场景 3：前后端分离部署
 

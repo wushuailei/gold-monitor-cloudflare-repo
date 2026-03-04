@@ -45,16 +45,22 @@ export function buildNodeAlertMessage(
   nodeLevel: number,
   createdBy: string,
 ): string {
-  const icon = alertType === "RISE" ? "📈" : "📉";
+  const icon = alertType === "RISE" ? "�" : "�";
+  const arrow = alertType === "RISE" ? "⬆️" : "⬇️";
   const typeLabel = alertType === "RISE" ? "涨幅" : "跌幅";
   const baseLabel = BASE_LABELS[baseType] || baseType;
 
-  const lines = [`${icon} [AU 金价${typeLabel}提醒]`];
-  lines.push(`当前价: ${priceNow.toFixed(2)}`);
-  lines.push(`${baseLabel}: ${refPrice.toFixed(2)}`);
-  lines.push(`${typeLabel}: ${Math.abs(changePercent).toFixed(2)}%`);
-  lines.push(`节点等级: ${nodeLevel}级`);
-  lines.push(`用户: ${createdBy}`);
+  const lines = [
+    `${icon}${icon}${icon} 【金价${typeLabel}节点】 ${icon}${icon}${icon}`,
+    ``,
+    `${arrow} 当前价格: ¥${priceNow.toFixed(2)}`,
+    `📊 ${baseLabel}: ¥${refPrice.toFixed(2)}`,
+    `📈 ${typeLabel}: ${Math.abs(changePercent).toFixed(2)}%`,
+    `⚡ 节点等级: ${nodeLevel}级`,
+    `👤 用户: ${createdBy}`,
+    ``,
+    `⏰ ${formatTs(Math.floor(Date.now() / 1000))}`,
+  ];
   return lines.join("\n");
 }
 
@@ -68,10 +74,20 @@ export function buildTargetMessage(
   createdBy: string,
 ): string {
   const cmpLabel = CMP_LABELS[cmp] || cmp;
-  const lines = [`🎯 [AU 目标价提醒]`];
-  lines.push(`目标价: ${targetPrice.toFixed(2)} (${cmpLabel})`);
-  lines.push(`当前价: ${currentPrice.toFixed(2)}`);
-  lines.push(`用户: ${createdBy}`);
+  const diff = currentPrice - targetPrice;
+  const diffStr = diff >= 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  
+  const lines = [
+    `🎯🎯🎯 【目标价触发】 🎯🎯🎯`,
+    ``,
+    `📍 目标价格: ¥${targetPrice.toFixed(2)}`,
+    `📐 触发条件: ${cmpLabel}`,
+    `💰 当前价格: ¥${currentPrice.toFixed(2)}`,
+    `📊 偏离幅度: ¥${diffStr}`,
+    `👤 用户: ${createdBy}`,
+    ``,
+    `⏰ ${formatTs(Math.floor(Date.now() / 1000))}`,
+  ];
   return lines.join("\n");
 }
 
@@ -79,5 +95,42 @@ export function buildTargetMessage(
  * 构造 AI 分析报告消息
  */
 export function buildReportMessage(price: number, reportMd: string): string {
-  return `[AU 金价 AI 分析]\n当前价: ${price.toFixed(2)}\n\n${reportMd}`;
+  const lines = [
+    `🤖🤖🤖 【AI 每日分析】 🤖🤖🤖`,
+    ``,
+    `💰 当前金价: ¥${price.toFixed(2)}`,
+    ``,
+    `${reportMd}`,
+  ];
+  return lines.join("\n");
+}
+
+/**
+ * 构造整数关口突破/跌破消息
+ */
+export function buildPriceLevelMessage(
+  level: number,
+  direction: string,
+  currentPrice: number,
+  symbol: string,
+): string {
+  const isUp = direction === "UP";
+  const icon = isUp ? "�" : "�";
+  const arrow = isUp ? "⬆️" : "⬇️";
+  const action = isUp ? "突破" : "跌破";
+  const barrier = isUp ? "━━━⬆️━━━" : "━━━⬇️━━━";
+  
+  const lines = [
+    `${icon}${icon}${icon} 【关口${action}】 ${icon}${icon}${icon}`,
+    ``,
+    `${barrier}`,
+    `   ¥${level} 整数关口`,
+    `${barrier}`,
+    ``,
+    `${arrow} 当前价格: ¥${currentPrice.toFixed(2)}`,
+    `📍 品种: ${symbol}`,
+    ``,
+    `⏰ ${formatTs(Math.floor(Date.now() / 1000))}`,
+  ];
+  return lines.join("\n");
 }

@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { DailyPrice } from "../types";
-import { Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { formatBeijingDate } from "../utils/time";
+import { Calendar, TrendingUp, TrendingDown, CircleDot, CircleStop } from "lucide-react";
 
 interface DailyPriceListProps {
   dailyPrices: DailyPrice[];
@@ -21,7 +21,6 @@ export function DailyPriceList({ dailyPrices }: DailyPriceListProps) {
     );
   }
 
-  // 按日期倒序排列
   const sortedPrices = [...dailyPrices].sort((a, b) => b.day_ts - a.day_ts);
 
   return (
@@ -42,21 +41,27 @@ export function DailyPriceList({ dailyPrices }: DailyPriceListProps) {
             <tr className="border-b border-gray-200">
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">日期</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">品种</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">开盘价</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">收盘价</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">最高价</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">最低价</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">振幅</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">波动率</th>
             </tr>
           </thead>
           <tbody>
             {sortedPrices.map((daily) => {
               const range = daily.max_price - daily.min_price;
-              const volatility = (range / daily.min_price) * 100;
+              const changeAmount = daily.open_price && daily.close_price 
+                ? daily.close_price - daily.open_price 
+                : null;
+              const changePercent = daily.open_price && daily.close_price && daily.open_price > 0
+                ? ((daily.close_price - daily.open_price) / daily.open_price) * 100
+                : null;
               
               return (
                 <tr key={daily.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4 text-sm text-gray-900 font-medium">
-                    {format(daily.day_ts * 1000, "yyyy-MM-dd")}
+                    {formatBeijingDate(daily.day_ts, "yyyy-MM-dd")}
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">
@@ -64,12 +69,51 @@ export function DailyPriceList({ dailyPrices }: DailyPriceListProps) {
                     </span>
                   </td>
                   <td className="py-3 px-4">
+                    {daily.open_price != null ? (
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CircleDot size={14} className="text-blue-500" />
+                          <span className="font-mono font-semibold text-gray-900">¥{daily.open_price.toFixed(2)}</span>
+                        </div>
+                        {daily.open_ts && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {formatBeijingDate(daily.open_ts, "HH:mm")}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {daily.close_price != null ? (
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CircleStop size={14} className="text-purple-500" />
+                          <span className="font-mono font-semibold text-gray-900">¥{daily.close_price.toFixed(2)}</span>
+                        </div>
+                        {daily.close_ts && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {formatBeijingDate(daily.close_ts, "HH:mm")}
+                          </div>
+                        )}
+                        {changeAmount != null && (
+                          <div className={`text-xs mt-0.5 ${changeAmount >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {changeAmount >= 0 ? '+' : ''}{changeAmount.toFixed(2)} ({changePercent?.toFixed(2)}%)
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={16} className="text-red-500" />
                       <span className="font-mono font-semibold text-gray-900">¥{daily.max_price.toFixed(2)}</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">
-                      {format(daily.max_ts * 1000, "HH:mm")}
+                      {formatBeijingDate(daily.max_ts, "HH:mm")}
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -78,18 +122,11 @@ export function DailyPriceList({ dailyPrices }: DailyPriceListProps) {
                       <span className="font-mono font-semibold text-gray-900">¥{daily.min_price.toFixed(2)}</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">
-                      {format(daily.min_ts * 1000, "HH:mm")}
+                      {formatBeijingDate(daily.min_ts, "HH:mm")}
                     </div>
                   </td>
                   <td className="py-3 px-4">
                     <span className="font-mono font-semibold text-gray-900">¥{range.toFixed(2)}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`font-semibold text-sm ${
-                      volatility >= 1 ? 'text-red-600' : volatility >= 0.5 ? 'text-orange-600' : 'text-gray-600'
-                    }`}>
-                      {volatility.toFixed(2)}%
-                    </span>
                   </td>
                 </tr>
               );

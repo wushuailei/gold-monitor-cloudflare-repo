@@ -5,6 +5,7 @@ import { nowTs, getTodayMidnightTs } from "../utils/time";
 import { fetchGoldPrice } from "./fetchPrice";
 import { runAlertEngine } from "./alertEngine";
 import { checkTargets } from "./targetCheck";
+import { checkPriceLevels } from "./priceLevelCheck";
 import { cleanupOldData } from "./dataCleanup";
 import { sendDailyReport, shouldSendDailyReport } from "./dailyReport";
 
@@ -15,9 +16,10 @@ import { sendDailyReport, shouldSendDailyReport } from "./dailyReport";
  * 1. 拉取金价 → 写入 prices
  * 2. 日线汇总 → 更新 daily_prices
  * 3. 告警引擎 → 基于昨日收盘价/买入价对比的涨跌幅节点告警
- * 4. 目标价检查 → 基于 user_configs 的目标价提醒
- * 5. 数据清理 → 每天 00:00 清理 360 天前的数据
- * 6. 每日早报 → 每天 09:00 发送 AI 分析报告
+ * 4. 目标价检查 → 基于 user_targets 的目标价提醒
+ * 5. 整数关口检查 → 每跨越 10 元关口提醒
+ * 6. 数据清理 → 每天 00:00 清理 360 天前的数据
+ * 7. 每日早报 → 每天 09:00 发送 AI 分析报告
  */
 export async function handleScheduled(
   env: Env,
@@ -92,63 +94,112 @@ export async function handleScheduled(
     console.error("Failed to insert price record:", err);
   }
 
+  // ── Step 2.5: 价格异常检测 ──
+  // 如果价格涨跌超过 1000，跳过后续告警操作（防止异常数据）
+  const lastPriceRecord = await env.DB.prepare(
+    `SELECT price FROM prices WHERE symbol = ? ORDER BY ts DESC LIMIT 1 OFFSET 1`,
+  )
+    .bind(symbol)
+    .first<{ price: number }>();
+
+  if (lastPriceRecord && Math.abs(priceNow - lastPriceRecord.price) > 1000) {
+    console.error(
+      `[Scheduled] Price anomaly detected: ${lastPriceRecord.price} → ${priceNow}, skipping alerts`
+    );
+    return;
+  }
+
   // ── Step 3: 日线汇总 ──
   const todayTs = getTodayMidnightTs();
   try {
     const existing = await env.DB.prepare(
-      `SELECT max_price, min_price FROM daily_prices WHERE symbol = ? AND day_ts = ?`,
+      `SELECT max_price, min_price, open_price, close_price FROM daily_prices WHERE symbol = ? AND day_ts = ?`,
     )
       .bind(symbol, todayTs)
-      .first<{ max_price: number; min_price: number }>();
+      .first<{ max_price: number; min_price: number; open_price: number | null; close_price: number | null }>();
+
+    // 判断是否需要记录开盘价（北京时间 9:00-9:05）
+    const beijingHour = getBeijingHour(ts);
+    const beijingMinute = getBeijingMinute(ts);
+    const isOpenTime = beijingHour === 9 && beijingMinute < 5;
+    // 判断是否需要记录收盘价（北京时间 23:55-24:00，即 23:55-23:59）
+    const isCloseTime = beijingHour === 23 && beijingMinute >= 55;
 
     if (!existing) {
       await env.DB.prepare(
-        `INSERT INTO daily_prices (symbol, day_ts, max_price, min_price, max_ts, min_ts, last_updated)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO daily_prices (symbol, day_ts, open_price, open_ts, close_price, close_ts, max_price, min_price, max_ts, min_ts, last_updated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-        .bind(symbol, todayTs, priceNow, priceNow, ts, ts, ts)
+        .bind(symbol, todayTs, 
+          isOpenTime ? priceNow : null, 
+          isOpenTime ? ts : null,
+          isCloseTime ? priceNow : null,
+          isCloseTime ? ts : null,
+          priceNow, priceNow, ts, ts, ts)
         .run();
     } else {
-      const newMax = priceNow > existing.max_price;
-      const newMin = priceNow < existing.min_price;
-
-      if (newMax || newMin) {
-        // 构建动态 UPDATE 语句
-        const updates: string[] = ["last_updated = ?"];
-        const bindings: any[] = [symbol, todayTs, ts];
-        
-        if (newMax) {
-          updates.push("max_price = ?", "max_ts = ?");
-          bindings.push(priceNow, ts);
-        }
-        if (newMin) {
-          updates.push("min_price = ?", "min_ts = ?");
-          bindings.push(priceNow, ts);
-        }
-
-        await env.DB.prepare(
-          `UPDATE daily_prices SET ${updates.join(", ")} WHERE symbol = ? AND day_ts = ?`,
-        )
-          .bind(...bindings)
-          .run();
+      const updates: string[] = ["last_updated = ?"];
+      const bindings: any[] = [ts];
+      
+      // 更新开盘价（仅在开盘时间段且尚未记录时）
+      if (isOpenTime && !existing.open_price) {
+        updates.push("open_price = ?", "open_ts = ?");
+        bindings.push(priceNow, ts);
       }
+      
+      // 更新收盘价（仅在收盘时间段）
+      if (isCloseTime) {
+        updates.push("close_price = ?", "close_ts = ?");
+        bindings.push(priceNow, ts);
+      }
+      
+      // 更新最高价
+      if (priceNow > existing.max_price) {
+        updates.push("max_price = ?", "max_ts = ?");
+        bindings.push(priceNow, ts);
+      }
+      
+      // 更新最低价
+      if (priceNow < existing.min_price) {
+        updates.push("min_price = ?", "min_ts = ?");
+        bindings.push(priceNow, ts);
+      }
+
+      bindings.push(symbol, todayTs);
+      await env.DB.prepare(
+        `UPDATE daily_prices SET ${updates.join(", ")} WHERE symbol = ? AND day_ts = ?`,
+      )
+        .bind(...bindings)
+        .run();
     }
   } catch (err) {
     console.error("Failed to handle daily stats:", err);
   }
 
   // ── Step 4: 告警引擎（涨跌幅节点） ──
-  try {
-    await runAlertEngine(env, priceNow, ts, symbol);
-  } catch (err) {
-    console.error("Failed to run alert engine:", err);
-  }
-
   // ── Step 5: 目标价检查 ──
-  try {
-    await checkTargets(env, priceNow, ts, symbol);
-  } catch (err) {
-    console.error("Failed to check targets:", err);
+  // ── Step 6: 整数关口检查 ──
+  // 只在工作日 9:00-23:00（北京时间）期间发送提醒
+  if (isWithinAlertHours(ts)) {
+    try {
+      await runAlertEngine(env, priceNow, ts, symbol);
+    } catch (err) {
+      console.error("Failed to run alert engine:", err);
+    }
+
+    try {
+      await checkTargets(env, priceNow, ts, symbol);
+    } catch (err) {
+      console.error("Failed to check targets:", err);
+    }
+
+    try {
+      await checkPriceLevels(env, priceNow, ts, symbol);
+    } catch (err) {
+      console.error("Failed to check price levels:", err);
+    }
+  } else {
+    console.log("[Scheduled] Outside alert hours (weekdays 9:00-23:00 Beijing time), skipping alerts");
   }
 }
 
@@ -181,4 +232,66 @@ async function shouldRunCleanupToday(env: Env, currentTs: number): Promise<boole
   // 标记今天已执行
   await env.KV.put('last_cleanup_date', today);
   return true;
+}
+
+/**
+ * 检查当前时间是否在提醒时段内
+ * 
+ * 规则：工作日（周一至周五）北京时间 9:00-23:00
+ * 北京时间 = UTC + 8
+ * 所以：北京时间 9:00 = UTC 1:00，北京时间 23:00 = UTC 15:00
+ */
+function isWithinAlertHours(currentTs: number): boolean {
+  const now = new Date(currentTs * 1000);
+  
+  // 获取 UTC 时间
+  const utcHour = now.getUTCHours();
+  const utcDay = now.getUTCDay(); // 0=周日, 1=周一, ..., 6=周六
+  
+  // 转换为北京时间的小时数
+  // UTC 0:00 = 北京时间 8:00
+  // UTC 16:00 = 北京时间 0:00（次日）
+  let beijingHour = utcHour + 8;
+  
+  // 处理跨日情况
+  let beijingDay = utcDay;
+  if (beijingHour >= 24) {
+    beijingHour -= 24;
+    beijingDay = (utcDay + 1) % 7;
+  }
+  
+  // 检查是否为工作日（周一至周五，即 1-5）
+  const isWeekday = beijingDay >= 1 && beijingDay <= 5;
+  if (!isWeekday) {
+    return false;
+  }
+  
+  // 检查是否在 9:00-23:00 范围内
+  const isWithinHours = beijingHour >= 9 && beijingHour < 23;
+  return isWithinHours;
+}
+
+/**
+ * 获取北京时间的 hour（0-23）
+ */
+function getBeijingHour(currentTs: number): number {
+  const now = new Date(currentTs * 1000);
+  const utcHour = now.getUTCHours();
+  const utcMinute = now.getUTCMinutes();
+  
+  // 北京时间 = UTC + 8
+  // 考虑分钟，UTC 15:59 北京时间 23:59
+  let beijingHour = utcHour + 8;
+  if (beijingHour >= 24) {
+    beijingHour -= 24;
+  }
+  return beijingHour;
+}
+
+/**
+ * 获取北京时间的 minute（0-59）
+ */
+function getBeijingMinute(currentTs: number): number {
+  const now = new Date(currentTs * 1000);
+  return now.getUTCMinutes();
 }

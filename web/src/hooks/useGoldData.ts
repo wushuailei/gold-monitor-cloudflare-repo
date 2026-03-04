@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, GlobalConfig, UserTarget } from "../lib/api";
-import { PricePoint, Trade, Report, Alert, UserConfig, DailyPrice } from "../types";
+import { PricePoint, Trade, Report, Alert, UserConfig, DailyPrice, PriceLevel } from "../types";
 
 interface Holding {
   symbol: string;
@@ -16,13 +16,15 @@ export function useGoldData(
   dailyDays: number,
   tradeDays: number,
   alertDays: number,
-  reportDays: number
+  reportDays: number,
+  priceLevelDays: number
 ) {
   const [prices, setPrices] = useState<PricePoint[]>([]);
   const [dailyPrices, setDailyPrices] = useState<DailyPrice[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [priceLevels, setPriceLevels] = useState<PriceLevel[]>([]);
   const [configs, setConfigs] = useState<UserConfig[]>([]);
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig | null>(null);
   const [userTargets, setUserTargets] = useState<UserTarget[]>([]);
@@ -38,6 +40,7 @@ export function useGoldData(
         tradeData,
         reportData,
         alertData,
+        priceLevelData,
         configData,
         globalConfigData,
         userTargetsData,
@@ -48,6 +51,7 @@ export function useGoldData(
         api.getTrades(tradeDays),
         api.getReports(reportDays),
         api.getAlerts(alertDays),
+        api.getPriceLevels(priceLevelDays),
         api.getTargets(),
         api.getGlobalConfig(),
         api.getUserTargets(),
@@ -58,6 +62,7 @@ export function useGoldData(
       setTrades(tradeData);
       setReports(reportData);
       setAlerts(alertData);
+      setPriceLevels(priceLevelData);
       setConfigs(configData);
       setGlobalConfig(globalConfigData);
       setUserTargets(userTargetsData);
@@ -71,7 +76,7 @@ export function useGoldData(
 
   useEffect(() => {
     fetchData();
-  }, [chartHours, dailyDays, tradeDays, alertDays, reportDays]);
+  }, [chartHours, dailyDays, tradeDays, alertDays, reportDays, priceLevelDays]);
 
   return {
     prices,
@@ -79,6 +84,7 @@ export function useGoldData(
     trades,
     reports,
     alerts,
+    priceLevels,
     configs,
     globalConfig,
     userTargets,

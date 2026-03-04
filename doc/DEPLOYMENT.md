@@ -145,6 +145,15 @@ npx wrangler d1 execute au_gold_db --remote --file=migrations/0003_create_report
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0004_create_trades_table.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0005_create_user_configs_table.sql
 npx wrangler d1 execute au_gold_db --remote --file=migrations/0006_create_daily_prices_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0007_create_global_configs_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0008_create_user_targets_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0009_create_holdings_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0010_add_trigger_fields_to_reports.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0011_add_market_status_to_global_configs.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0012_simplify_holdings_table.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0013_add_open_close_price.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0014_add_alert_count_to_user_targets.sql
+npx wrangler d1 execute au_gold_db --remote --file=migrations/0015_add_price_level_alert.sql
 ```
 
 ### 2. 验证数据库
@@ -161,6 +170,10 @@ npx wrangler d1 execute au_gold_db --remote --command="SELECT name FROM sqlite_m
 - trades
 - user_configs
 - daily_prices
+- global_configs
+- user_targets
+- holdings
+- price_levels
 
 ---
 

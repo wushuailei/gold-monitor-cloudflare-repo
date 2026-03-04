@@ -32,7 +32,7 @@ export function TargetManagement({ userTargets, onEdit, onDelete }: TargetManage
                         : "bg-gray-100 text-gray-500"
                     }`}
                   >
-                    {isActive ? "● 活跃" : "○ 已触发"}
+                    {isActive ? `● 活跃 (${t.alert_count}/3)` : "○ 已触发"}
                   </div>
                   <div
                     className={`text-lg font-bold font-mono ${

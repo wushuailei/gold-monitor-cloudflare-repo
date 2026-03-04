@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { Trade } from "../types";
+import { formatBeijingDate } from "../utils/time";
 import { TrendingUp, TrendingDown, Coins, Trash2 } from "lucide-react";
 
 interface TradeListProps {
@@ -27,22 +27,15 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
     );
   }
 
-  // 按时间倒序排列
   const sortedTrades = [...trades].sort((a, b) => b.ts - a.ts);
 
-  // 使用后端传来的真实持仓数据
-  const holdingQty = holdingsQty;
-  
-  // 使用后端的已实现盈亏
+  const totalQty = holdingsQty;
+  const avgPrice = holdingsAvgPrice;
+  const totalCost = holdingsCost;
+  const marketValue = totalQty > 0 && currentPrice > 0 ? totalQty * currentPrice : 0;
+  const holdingProfit = marketValue - totalCost;
+  const holdingProfitPercent = totalCost > 0 ? (holdingProfit / totalCost) * 100 : 0;
   const realizedProfit = holdingsRealizedProfit;
-  
-  // 浮动盈亏：当前持仓 * (当前价 - 平均成本)
-  const unrealizedProfit = holdingQty > 0 && currentPrice > 0 && holdingsAvgPrice > 0
-    ? (currentPrice - holdingsAvgPrice) * holdingQty
-    : 0;
-  
-  const totalProfit = realizedProfit + unrealizedProfit;
-  const totalBuyAmount = holdingsCost;
 
   return (
     <div>
@@ -56,30 +49,31 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
         <div className="text-sm text-gray-500 font-medium">{trades.length} 笔交易</div>
       </div>
 
-      {/* 收益统计卡片 */}
-      {holdingQty > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      {totalQty > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-            <div className="text-xs text-blue-600 font-medium mb-1">持仓数量</div>
-            <div className="text-2xl font-bold text-blue-900">{holdingQty.toFixed(2)} 克</div>
-            <div className="text-xs text-blue-600 mt-1">平均成本 ¥{holdingsAvgPrice.toFixed(2)}</div>
+            <div className="text-xs text-blue-600 font-medium mb-1">持仓克重</div>
+            <div className="text-2xl font-bold text-blue-900">{totalQty.toFixed(2)} 克</div>
           </div>
           
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200">
+            <div className="text-xs text-cyan-600 font-medium mb-1">持仓克均价</div>
+            <div className="text-2xl font-bold text-cyan-900">¥{avgPrice.toFixed(2)}</div>
+          </div>
+
           <div className={`rounded-lg p-4 border ${
-            unrealizedProfit >= 0 
+            holdingProfit >= 0 
               ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
               : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
           }`}>
-            <div className={`text-xs font-medium mb-1 ${unrealizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              浮动盈亏
+            <div className={`text-xs font-medium mb-1 ${holdingProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              持仓收益
             </div>
-            <div className={`text-2xl font-bold ${unrealizedProfit >= 0 ? 'text-red-900' : 'text-green-900'}`}>
-              {unrealizedProfit >= 0 ? '+' : ''}¥{unrealizedProfit.toFixed(2)}
+            <div className={`text-2xl font-bold ${holdingProfit >= 0 ? 'text-red-900' : 'text-green-900'}`}>
+              {holdingProfit >= 0 ? '+' : ''}¥{holdingProfit.toFixed(2)}
             </div>
-            <div className={`text-xs mt-1 ${unrealizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {holdingQty > 0 && currentPrice > 0 && holdingsAvgPrice > 0 && (
-                <>每克 {unrealizedProfit >= 0 ? '+' : ''}¥{((currentPrice - holdingsAvgPrice)).toFixed(2)}</>
-              )}
+            <div className={`text-xs mt-1 ${holdingProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {holdingProfitPercent >= 0 ? '+' : ''}{holdingProfitPercent.toFixed(2)}%
             </div>
           </div>
 
@@ -89,30 +83,22 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
               : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
           }`}>
             <div className={`text-xs font-medium mb-1 ${realizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              已实现盈亏
+              已实现收益
             </div>
             <div className={`text-2xl font-bold ${realizedProfit >= 0 ? 'text-red-900' : 'text-green-900'}`}>
               {realizedProfit >= 0 ? '+' : ''}¥{realizedProfit.toFixed(2)}
             </div>
-            <div className={`text-xs mt-1 ${realizedProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              所有已平仓交易
-            </div>
           </div>
 
-          <div className={`rounded-lg p-4 border ${
-            totalProfit >= 0 
-              ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
-              : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
-          }`}>
-            <div className={`text-xs font-medium mb-1 ${totalProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              总盈亏
-            </div>
-            <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-red-900' : 'text-green-900'}`}>
-              {totalProfit >= 0 ? '+' : ''}¥{totalProfit.toFixed(2)}
-            </div>
-            <div className={`text-xs mt-1 ${totalProfit >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {totalBuyAmount > 0 && ((totalProfit / totalBuyAmount) * 100).toFixed(2)}% 收益率
-            </div>
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
+            <div className="text-xs text-amber-600 font-medium mb-1">持仓市值</div>
+            <div className="text-2xl font-bold text-amber-900">¥{marketValue.toFixed(2)}</div>
+            <div className="text-xs text-amber-600 mt-1">当前价 ¥{currentPrice.toFixed(2)}/克</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+            <div className="text-xs text-purple-600 font-medium mb-1">持仓成本</div>
+            <div className="text-2xl font-bold text-purple-900">¥{totalCost.toFixed(2)}</div>
           </div>
         </div>
       )}
@@ -124,8 +110,8 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">时间</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">类型</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">品种</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">价格</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">数量</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">克价</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">克数</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">金额</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">备注</th>
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">操作</th>
@@ -134,8 +120,6 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
           <tbody>
             {sortedTrades.map((trade) => {
               const amount = trade.qty ? trade.price * trade.qty : 0;
-              
-              // 计算卖出盈亏（使用持仓平均成本）
               let profitLoss = 0;
               let profitLossPercent = 0;
               
@@ -147,7 +131,7 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
               return (
                 <tr key={trade.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {format(trade.ts * 1000, "MM月dd日 HH:mm")}
+                    {formatBeijingDate(trade.ts, "MM月dd日 HH:mm")}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
@@ -186,7 +170,7 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="font-mono font-semibold text-gray-900">¥{trade.price.toFixed(2)}</span>
+                    <span className="font-mono font-semibold text-gray-900">¥{trade.price.toFixed(2)}/克</span>
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
                     {trade.qty ? `${trade.qty} 克` : '-'}
