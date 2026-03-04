@@ -27,9 +27,9 @@ export async function checkPriceLevels(
 
   if (lastPrice == null) {
     await env.DB.prepare(
-      "UPDATE global_configs SET last_check_price = ? WHERE symbol = ?",
+      "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
     )
-      .bind(priceNow, symbol)
+      .bind(priceNow, ts, symbol)
       .run();
     return;
   }
@@ -55,9 +55,9 @@ export async function checkPriceLevels(
 
   if (alerts.length === 0) {
     await env.DB.prepare(
-      "UPDATE global_configs SET last_check_price = ? WHERE symbol = ?",
+      "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
     )
-      .bind(priceNow, symbol)
+      .bind(priceNow, ts, symbol)
       .run();
     return;
   }
@@ -67,9 +67,9 @@ export async function checkPriceLevels(
       `[PriceLevel] Too many alerts (${alerts.length}), skipping. prevLevel=${prevLevel}, currLevel=${currLevel}`
     );
     await env.DB.prepare(
-      "UPDATE global_configs SET last_check_price = ? WHERE symbol = ?",
+      "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
     )
-      .bind(priceNow, symbol)
+      .bind(priceNow, ts, symbol)
       .run();
     return;
   }
@@ -108,8 +108,8 @@ export async function checkPriceLevels(
   }
 
   await env.DB.prepare(
-    "UPDATE global_configs SET last_check_price = ? WHERE symbol = ?",
+    "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
   )
-    .bind(priceNow, symbol)
+    .bind(priceNow, ts, symbol)
     .run();
 }
