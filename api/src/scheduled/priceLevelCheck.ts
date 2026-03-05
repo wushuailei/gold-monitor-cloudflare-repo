@@ -49,7 +49,7 @@ export async function checkPriceLevels(
       alerts.push({ level, direction: "UP" });
     }
   } else if (priceNow < lastPrice) {
-    for (let level = prevLevel - PRICE_LEVEL_STEP; level > currLevel; level -= PRICE_LEVEL_STEP) {
+    for (let level = prevLevel; level > currLevel; level -= PRICE_LEVEL_STEP) {
       alerts.push({ level, direction: "DOWN" });
     }
   }
