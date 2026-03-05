@@ -55,11 +55,6 @@ export async function checkPriceLevels(
   }
 
   if (alerts.length === 0) {
-    await env.DB.prepare(
-      "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
-    )
-      .bind(priceNow, ts, symbol)
-      .run();
     return;
   }
 
@@ -81,11 +76,6 @@ export async function checkPriceLevels(
 
   if (filteredAlerts.length === 0) {
     console.log("[PriceLevel] All alerts filtered, skipping duplicate levels");
-    await env.DB.prepare(
-      "UPDATE global_configs SET last_check_price = ?, updated_ts = ? WHERE symbol = ?",
-    )
-      .bind(priceNow, ts, symbol)
-      .run();
     return;
   }
 
