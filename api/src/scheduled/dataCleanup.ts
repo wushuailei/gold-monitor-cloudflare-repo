@@ -36,12 +36,9 @@ export async function cleanupOldData(env: Env): Promise<void> {
     ).bind(cutoffTs).run();
     console.log(`[DataCleanup] Deleted ${reportsResult.meta.changes || 0} report records`);
     
-    // 清理交易记录（可选，根据需求决定是否保留所有交易记录）
-    const tradesResult = await env.DB.prepare(
-      "DELETE FROM trades WHERE ts < ?"
-    ).bind(cutoffTs).run();
-    console.log(`[DataCleanup] Deleted ${tradesResult.meta.changes || 0} trade records`);
-    
+    // 交易记录不清理：新模型下 trades 是持仓批次数据源（买入流水 = 持仓批次），
+    // 删除旧记录会破坏 remaining_qty 汇总，个人使用数据量小，全部保留。
+
     console.log("[DataCleanup] Cleanup completed successfully");
   } catch (err) {
     console.error("[DataCleanup] Failed to cleanup old data:", err);

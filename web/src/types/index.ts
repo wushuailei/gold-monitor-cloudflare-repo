@@ -16,6 +16,27 @@ export interface Trade {
   price: number;
   qty?: number;
   note?: string;
+  lot_id?: number; // 卖出时关联的买入批次 id
+  realized_pnl?: number; // 卖出时的已实现盈亏
+}
+
+export interface HoldingLot {
+  id: number;
+  symbol: string;
+  bought_ts: number;
+  cost_price: number;
+  qty: number; // 剩余克数
+  note?: string | null;
+}
+
+export interface Holding {
+  symbol: string;
+  lots: HoldingLot[];
+  total_qty: number;
+  total_cost: number;
+  avg_price: number;
+  realized_profit: number;
+  updated_ts: number;
 }
 
 export interface Report {

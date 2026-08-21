@@ -6,6 +6,7 @@ import {
   UserConfig,
   DailyPrice,
   PriceLevel,
+  Holding,
 } from "../types";
 
 export type Trade = TradeType;
@@ -222,14 +223,7 @@ export const api = {
   },
 
   // 持仓 API
-  async getHoldings(symbol: string = "AU"): Promise<{
-    symbol: string;
-    total_qty: number;
-    total_cost: number;
-    avg_price: number;
-    realized_profit: number;
-    updated_ts: number;
-  }> {
+  async getHoldings(symbol: string = "AU"): Promise<Holding> {
     const res = await fetch(`${API_BASE}/holdings?symbol=${symbol}`);
     if (!res.ok) throw new Error("Failed to fetch holdings");
     return res.json();

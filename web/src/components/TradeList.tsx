@@ -120,13 +120,10 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
           <tbody>
             {sortedTrades.map((trade) => {
               const amount = trade.qty ? trade.price * trade.qty : 0;
-              let profitLoss = 0;
-              let profitLossPercent = 0;
-              
-              if (trade.side === "卖" && trade.qty && holdingsAvgPrice > 0) {
-                profitLoss = (trade.price - holdingsAvgPrice) * trade.qty;
-                profitLossPercent = ((trade.price - holdingsAvgPrice) / holdingsAvgPrice) * 100;
-              }
+              const profitLoss = trade.realized_pnl || 0;
+              const profitLossPercent = profitLoss !== 0 && trade.qty && trade.price > 0
+                ? (profitLoss / (trade.price * trade.qty - profitLoss)) * 100
+                : 0;
               
               return (
                 <tr key={trade.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">

@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, GlobalConfig, UserTarget } from "../lib/api";
-import { PricePoint, Trade, Report, Alert, UserConfig, DailyPrice, PriceLevel } from "../types";
-
-interface Holding {
-  symbol: string;
-  total_qty: number;
-  total_cost: number;
-  avg_price: number;
-  realized_profit: number;
-  updated_ts: number;
-}
+import { PricePoint, Trade, Report, Alert, UserConfig, DailyPrice, PriceLevel, Holding } from "../types";
 
 export function useGoldData(
   chartHours: number,
@@ -93,5 +84,3 @@ export function useGoldData(
     refetch: fetchData,
   };
 }
-
-export type { Holding };

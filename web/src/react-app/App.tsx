@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api, GlobalConfig, UserTarget } from "../lib/api";
-import { Trade } from "../types";
+import { Trade, HoldingLot } from "../types";
 import { useGoldData } from "../hooks/useGoldData";
+import { MobileApp } from "./MobileApp";
+import { HoldingsSection } from "../components/HoldingsSection";
 import { Header } from "../components/Header";
 import { PriceCards } from "../components/PriceCards";
 import { StatsCards } from "../components/StatsCards";
@@ -19,7 +21,7 @@ import { DateRangeSelector } from "../components/DateRangeSelector";
 import { TargetManagement } from "../components/TargetManagement";
 import { GlobalConfigDisplay } from "../components/GlobalConfigDisplay";
 
-function App() {
+function DesktopApp() {
   // 时间范围选择
   const [chartHours, setChartHours] = useState(24);
   const [dailyDays, setDailyDays] = useState(7);
@@ -51,6 +53,7 @@ function App() {
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Partial<Trade>>({});
   const [selectedTarget, setSelectedTarget] = useState<UserTarget | undefined>(undefined);
+  const [selectedLotId, setSelectedLotId] = useState<number | undefined>(undefined);
 
   // 计算价格数据
   const latestPrice = prices.length > 0 ? prices[prices.length - 1].price : 0;
@@ -74,6 +77,12 @@ function App() {
       await api.deleteTrade(id);
       await refetch();
     }
+  };
+
+  const handleSellLot = (lot: HoldingLot) => {
+    setSelectedLotId(lot.id);
+    setSelectedTrade({ side: "卖" });
+    setIsTradeModalOpen(true);
   };
 
   const handleTargetSubmit = async (target: {
@@ -123,12 +132,13 @@ function App() {
           setIsTargetModalOpen(true);
         }}
         onOpenAddTrade={(side) => {
+          setSelectedLotId(undefined);
           setSelectedTrade({ side });
           setIsTradeModalOpen(true);
         }}
       />
 
-      <main className="max-w-[1800px] mx-auto px-8 py-6 space-y-6">
+      <main className="max-w-[1800px] mx-auto px-4 md:px-8 py-4 md:py-6 space-y-4 md:space-y-6">
         {/* Price Cards */}
         <PriceCards
           latestPrice={latestPrice}
@@ -147,14 +157,25 @@ function App() {
           holdings={holdings}
         />
 
+        {/* 逐笔持仓 */}
+        <HoldingsSection
+          lots={holdings?.lots || []}
+          currentPrice={latestPrice}
+          totalQty={holdings?.total_qty || 0}
+          totalCost={holdings?.total_cost || 0}
+          avgPrice={holdings?.avg_price || 0}
+          realizedProfit={holdings?.realized_profit || 0}
+          onSellLot={handleSellLot}
+        />
+
         {/* Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="mb-4 flex justify-between items-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
+          <div className="mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-900">价格走势图</h2>
               <p className="text-sm text-gray-500 mt-0.5">分钟线数据</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <DateRangeSelector
                 value={chartHours}
                 onChange={setChartHours}
@@ -182,7 +203,7 @@ function App() {
         </div>
 
         {/* Daily Prices Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="mb-4 flex justify-end">
             <DateRangeSelector value={dailyDays} onChange={setDailyDays} />
           </div>
@@ -190,7 +211,7 @@ function App() {
         </div>
 
         {/* Alerts Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="mb-4 flex justify-end">
             <DateRangeSelector value={alertDays} onChange={setAlertDays} />
           </div>
@@ -198,7 +219,7 @@ function App() {
         </div>
 
         {/* Price Levels Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="mb-4 flex justify-end">
             <DateRangeSelector value={priceLevelDays} onChange={setPriceLevelDays} />
           </div>
@@ -206,7 +227,7 @@ function App() {
         </div>
 
         {/* Trades Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="mb-4 flex justify-end">
             <DateRangeSelector value={tradeDays} onChange={setTradeDays} />
           </div>
@@ -222,7 +243,7 @@ function App() {
         </div>
 
         {/* Reports Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="mb-4 flex justify-end">
             <DateRangeSelector value={reportDays} onChange={setReportDays} />
           </div>
@@ -246,9 +267,15 @@ function App() {
       {/* Modals */}
       <TradeModal
         isOpen={isTradeModalOpen}
-        onClose={() => setIsTradeModalOpen(false)}
+        onClose={() => {
+          setIsTradeModalOpen(false);
+          setSelectedLotId(undefined);
+        }}
         onSubmit={handleTradeSubmit}
         initialData={selectedTrade}
+        lots={holdings?.lots || []}
+        currentPrice={latestPrice}
+        initialLotId={selectedLotId}
       />
 
       <TargetModal
@@ -275,6 +302,52 @@ function App() {
       />
     </div>
   );
+}
+
+function App() {
+  // 移动端检测（宽度 < 768px 视为手机）
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  // 允许用户从移动版手动切换到完整版
+  const [forceDesktop, setForceDesktop] = useState(
+    () => localStorage.getItem("gold-monitor-force-desktop") === "1",
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (isMobile && !forceDesktop) {
+    return (
+      <MobileApp
+        onOpenDesktop={() => {
+          localStorage.setItem("gold-monitor-force-desktop", "1");
+          setForceDesktop(true);
+        }}
+      />
+    );
+  }
+
+  // 手机宽度但强制使用完整版：提供返回移动版的悬浮按钮
+  if (isMobile && forceDesktop) {
+    return (
+      <>
+        <DesktopApp />
+        <button
+          onClick={() => {
+            localStorage.removeItem("gold-monitor-force-desktop");
+            setForceDesktop(false);
+          }}
+          className="fixed bottom-5 right-5 z-50 px-4 py-2.5 bg-amber-500 text-white rounded-full shadow-lg text-sm font-semibold active:bg-amber-600"
+        >
+          返回移动版
+        </button>
+      </>
+    );
+  }
+
+  return <DesktopApp />;
 }
 
 export default App;

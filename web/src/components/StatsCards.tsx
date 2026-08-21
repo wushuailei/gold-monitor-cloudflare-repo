@@ -1,15 +1,6 @@
 import { TrendingUp, Bell, Coins, Package } from "lucide-react";
 import { UserTarget } from "../lib/api";
-import { Trade, Alert } from "../types";
-
-interface Holding {
-  symbol: string;
-  total_qty: number;
-  total_cost: number;
-  avg_price: number;
-  realized_profit: number;
-  updated_ts: number;
-}
+import { Trade, Alert, Holding } from "../types";
 
 interface StatsCardsProps {
   userTargets: UserTarget[];
