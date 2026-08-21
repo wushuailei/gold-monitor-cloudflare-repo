@@ -21,6 +21,12 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    {
+      "pattern": "lollipop987.dpdns.org/api/*",
+      "zone_name": "lollipop987.dpdns.org"
+    }
+  ],
   "compatibility_flags": ["nodejs_compat"],
   "triggers": {
     "crons": ["*/1 * * * *"]
@@ -29,6 +35,6 @@
     "AI_API_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "AI_MODEL": "deepseek-v4-flash-0731",
     "REQUIRE_REFERER": "true",
-    "ALLOWED_REFERER": "https://lollipop987.dpdns.org"
+    "ALLOWED_ORIGINS": "https://lollipop987.dpdns.org"
   }
 }

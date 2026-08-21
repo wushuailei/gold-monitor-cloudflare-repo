@@ -244,7 +244,7 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="text-xs font-medium text-blue-600 mb-1">总持仓克重</div>
-              <div className="text-2xl font-bold font-mono text-blue-900">{totalQty.toFixed(2)} 克</div>
+              <div className="text-2xl font-bold font-mono text-blue-900">{totalQty.toFixed(4)} 克</div>
             </div>
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
               <div className="text-xs font-medium text-cyan-600 mb-1">持仓均价</div>
@@ -342,7 +342,7 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
                       </div>
                       <div>
                         <div className="text-[11px] text-gray-500">剩余</div>
-                        <div className="text-sm font-bold font-mono text-gray-900">{lot.qty.toFixed(2)} 克</div>
+                        <div className="text-sm font-bold font-mono text-gray-900">{lot.qty.toFixed(4)} 克</div>
                       </div>
                     </div>
                     <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">
@@ -486,15 +486,15 @@ function BuySheet({
           />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">克数 (克)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">克数 (克，精确到 0.0001)</label>
           <input
             type="number"
             inputMode="decimal"
-            step="0.01"
+            step="0.0001"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-lg text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="例如 10"
+            placeholder="例如 10.0000"
           />
         </div>
         <div>
@@ -576,7 +576,7 @@ function SellSheet({
       return;
     }
     if (qtyNum > maxQty) {
-      alert(`该批次仅剩 ${maxQty} 克`);
+      alert(`该批次仅剩 ${maxQty.toFixed(4)} 克`);
       return;
     }
     // 时间可选：为空则默认当前时间
@@ -614,7 +614,7 @@ function SellSheet({
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-500">剩余克数</div>
-              <div className="text-lg font-bold font-mono text-gray-900">{maxQty.toFixed(2)} 克</div>
+              <div className="text-lg font-bold font-mono text-gray-900">{maxQty.toFixed(4)} 克</div>
             </div>
           </div>
 
@@ -631,16 +631,16 @@ function SellSheet({
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">卖出克数 (最多 {maxQty.toFixed(2)} 克)</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">卖出克数 (最多 {maxQty.toFixed(4)} 克)</label>
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step="0.0001"
               max={maxQty}
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-lg text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder={`最多 ${maxQty.toFixed(2)} 克`}
+              placeholder={`最多 ${maxQty.toFixed(4)} 克`}
             />
           </div>
           <div>

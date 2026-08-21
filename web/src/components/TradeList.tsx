@@ -53,7 +53,7 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
             <div className="text-xs text-blue-600 font-medium mb-1">持仓克重</div>
-            <div className="text-2xl font-bold text-blue-900">{totalQty.toFixed(2)} 克</div>
+            <div className="text-2xl font-bold text-blue-900">{totalQty.toFixed(4)} 克</div>
           </div>
           
           <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200">
@@ -170,7 +170,7 @@ export function TradeList({ trades, currentPrice = 0, holdingsAvgPrice = 0, hold
                     <span className="font-mono font-semibold text-gray-900">¥{trade.price.toFixed(2)}/克</span>
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {trade.qty ? `${trade.qty} 克` : '-'}
+                    {trade.qty ? `${trade.qty.toFixed(4)} 克` : '-'}
                   </td>
                   <td className="py-3 px-4">
                     {amount > 0 ? (

@@ -150,14 +150,14 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData, lots = [], 
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">克数 (克)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">克数 (克，精确到 0.0001)</label>
           <Input
             type="number"
-            step="0.01"
+            step="0.0001"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             required
-            placeholder="例如: 10"
+            placeholder="例如: 10.0000"
           />
         </div>
 
@@ -168,7 +168,7 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData, lots = [], 
               <Select value={lotId} onChange={(e) => setLotId(e.target.value)}>
                 {lots.map((lot) => (
                   <option key={lot.id} value={lot.id}>
-                    买入于 {new Date(lot.bought_ts * 1000).toLocaleDateString("zh-CN")} · 成本 ¥{lot.cost_price.toFixed(2)} · 剩余 {lot.qty} 克
+                    买入于 {new Date(lot.bought_ts * 1000).toLocaleDateString("zh-CN")} · 成本 ¥{lot.cost_price.toFixed(2)} · 剩余 {lot.qty.toFixed(4)} 克
                     {lot.note ? ` · ${lot.note}` : ""}
                   </option>
                 ))}

@@ -50,7 +50,7 @@ export function HoldingsSection({
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
           <div className="text-xs text-blue-600 font-medium mb-1">总持仓克重</div>
-          <div className="text-xl font-bold font-mono text-blue-900">{totalQty.toFixed(2)} 克</div>
+          <div className="text-xl font-bold font-mono text-blue-900">{totalQty.toFixed(4)} 克</div>
         </div>
         <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
           <div className="text-xs text-cyan-600 font-medium mb-1">持仓均价</div>
@@ -135,7 +135,7 @@ export function HoldingsSection({
                   </div>
                   <div>
                     <div className="text-[11px] text-gray-500">剩余</div>
-                    <div className="text-sm font-bold font-mono text-gray-900">{lot.qty.toFixed(2)} 克</div>
+                    <div className="text-sm font-bold font-mono text-gray-900">{lot.qty.toFixed(4)} 克</div>
                   </div>
                 </div>
                 <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">

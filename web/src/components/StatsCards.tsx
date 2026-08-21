@@ -34,7 +34,7 @@ export function StatsCards({ userTargets, alerts, trades, latestPrice, holdings 
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200 p-6 hover:shadow-md transition-shadow">
               <div className="text-sm font-medium text-blue-600 mb-2">持仓克重</div>
               <div className="text-3xl font-bold text-blue-900">
-                {totalQty.toFixed(2)} 克
+                {totalQty.toFixed(4)} 克
               </div>
             </div>
 
