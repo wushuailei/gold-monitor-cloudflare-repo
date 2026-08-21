@@ -69,6 +69,18 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData, lots = [], 
     ? (parseFloat(price) - selectedLot.cost_price) * parseFloat(qty)
     : null;
 
+  // 卖出前整体均价 / 卖出后整体均价（用于预览对均价的影响）
+  const beforeTotalQty = lots.reduce((s, l) => s + l.qty, 0);
+  const beforeTotalCost = lots.reduce((s, l) => s + l.qty * l.cost_price, 0);
+  const beforeAvgPrice = beforeTotalQty > 0 ? beforeTotalCost / beforeTotalQty : 0;
+  const qtyNum = parseFloat(qty) || 0;
+  const afterQty = side === "卖" && selectedLot ? beforeTotalQty - qtyNum : beforeTotalQty;
+  const afterCost = side === "卖" && selectedLot && qtyNum <= selectedLot.qty
+    ? beforeTotalCost - qtyNum * selectedLot.cost_price
+    : beforeTotalCost;
+  const afterAvgPrice = afterQty > 0 ? afterCost / afterQty : 0;
+  const avgShift = afterAvgPrice - beforeAvgPrice;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!price || parseFloat(price) <= 0 || !qty || parseFloat(qty) <= 0) {
@@ -194,6 +206,19 @@ export function TradeModal({ isOpen, onClose, onSubmit, initialData, lots = [], 
               estimatedPnl !== null && estimatedPnl >= 0 ? "text-red-600" : "text-green-600"
             }`}>
               {estimatedPnl !== null ? `${estimatedPnl >= 0 ? "+" : ""}¥${estimatedPnl.toFixed(2)}` : "-"}
+            </div>
+          </div>
+        )}
+
+        {side === "卖" && beforeTotalQty > 0 && (
+          <div className="rounded-lg p-3 bg-gray-50 border border-gray-200">
+            <div className="text-xs text-gray-500 mb-1">卖出后整体均价</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-mono text-gray-400 line-through">¥{beforeAvgPrice.toFixed(2)}</span>
+              <span className="text-sm font-bold font-mono text-gray-900">→ ¥{afterAvgPrice.toFixed(2)}</span>
+              <span className={`text-xs font-bold ${avgShift !== 0 ? (avgShift >= 0 ? "text-red-600" : "text-green-600") : "text-gray-400"}`}>
+                {avgShift !== 0 ? `${avgShift > 0 ? "↑" : "↓"} ${Math.abs(avgShift).toFixed(2)}` : "—"}
+              </span>
             </div>
           </div>
         )}

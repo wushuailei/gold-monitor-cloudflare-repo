@@ -35,6 +35,7 @@ export interface Holding {
   total_qty: number;
   total_cost: number;
   avg_price: number;
+  avg_cost_price: number; // 摊薄成本价 = (累计买入额 - 累计卖出额) / 持仓克数
   realized_profit: number;
   updated_ts: number;
 }

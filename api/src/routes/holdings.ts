@@ -44,12 +44,29 @@ export async function handleGetHoldings(
     .bind(symbol)
     .first<{ realized: number }>();
 
+  // 摊薄成本价：累计买入总额 − 累计卖出总额 后再除以当前持仓克数
+  // （把所有已实现盈亏摊进剩余持仓，反映真实成本）
+  const costRow = await env.DB.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN side = '买' THEN price * qty ELSE 0 END), 0) AS bought_amount,
+       COALESCE(SUM(CASE WHEN side = '卖' THEN price * qty ELSE 0 END), 0) AS sold_amount
+     FROM trades WHERE symbol = ?`,
+  )
+    .bind(symbol)
+    .first<{ bought_amount: number; sold_amount: number }>();
+
   let totalQty = 0;
   let totalCost = 0;
   for (const lot of lots.results) {
     totalQty += lot.qty;
     totalCost += lot.qty * lot.cost_price;
   }
+
+  const boughtAmount = costRow?.bought_amount || 0;
+  const soldAmount = costRow?.sold_amount || 0;
+  // 摊薄成本价 = 净投入 / 当前持仓克数（持仓为 0 时无意义）
+  const avgCostPrice =
+    totalQty > 0 ? (boughtAmount - soldAmount) / totalQty : 0;
 
   return jsonResponse(
     {
@@ -58,6 +75,7 @@ export async function handleGetHoldings(
       total_qty: totalQty,
       total_cost: totalCost,
       avg_price: totalQty > 0 ? totalCost / totalQty : 0,
+      avg_cost_price: avgCostPrice,
       realized_profit: realizedRow?.realized || 0,
       updated_ts: now,
     },

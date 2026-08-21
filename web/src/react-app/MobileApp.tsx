@@ -7,7 +7,7 @@ function toLocalInputValue(ts: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 import { api } from "../lib/api";
-import { PricePoint, Holding, HoldingLot } from "../types";
+import { PricePoint, Holding, HoldingLot, Trade } from "../types";
 import { formatBeijingDate } from "../utils/time";
 import {
   RefreshCw,
@@ -84,8 +84,11 @@ function StatCard({
 export function MobileApp({ onOpenDesktop }: MobileAppProps) {
   const [prices, setPrices] = useState<PricePoint[]>([]);
   const [holdings, setHoldings] = useState<Holding | null>(null);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // 交易记录时间范围：7天 / 30天 / 90天 / 全部
+  const [tradeRange, setTradeRange] = useState<number>(7);
 
   // 底部弹层状态
   const [buyOpen, setBuyOpen] = useState(false);
@@ -94,19 +97,21 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [priceData, holdingData] = await Promise.all([
+      const [priceData, holdingData, tradeData] = await Promise.all([
         api.getPrices(24),
         api.getHoldings(),
+        api.getTrades(tradeRange),
       ]);
       setPrices(priceData);
       setHoldings(holdingData);
+      setTrades(tradeData);
     } catch (err) {
       console.error("Failed to fetch mobile data:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [tradeRange]);
 
   useEffect(() => {
     fetchData();
@@ -126,6 +131,9 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
   const marketValue = totalQty > 0 && latestPrice > 0 ? totalQty * latestPrice : 0;
   const totalPnl = marketValue - totalCost;
   const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  // 总收益 = 已实现盈亏 + 浮盈
+  const totalProfit = realizedProfit + totalPnl;
+  const totalProfitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -229,20 +237,20 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
             <div className="text-xs text-gray-400">{holdings?.lots?.length || 0} 笔持仓</div>
           </div>
 
-          {/* 总浮盈大数字 */}
-          <div className={`rounded-xl border p-4 mb-3 ${pnlBg(totalPnl)} ${pnlBorder(totalPnl)}`}>
-            <div className="text-xs font-medium text-gray-500 mb-1">总浮盈/浮亏（未卖出）</div>
-            <div className={`text-3xl font-bold font-mono ${pnlColor(totalPnl)}`}>
-              {totalPnl >= 0 ? "+" : ""}¥{totalPnl.toFixed(2)}
+          {/* 总收益大数字（已实现 + 浮盈） */}
+          <div className={`rounded-xl border p-4 mb-3 ${pnlBg(totalProfit)} ${pnlBorder(totalProfit)}`}>
+            <div className="text-xs font-medium text-gray-500 mb-1">总收益（已实现 + 浮盈）</div>
+            <div className={`text-3xl font-bold font-mono ${pnlColor(totalProfit)}`}>
+              {totalProfit >= 0 ? "+" : ""}¥{totalProfit.toFixed(2)}
             </div>
-            <div className={`text-xs mt-1 font-medium ${pnlColor(totalPnl)}`}>
-              收益率 {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent.toFixed(2)}%
+            <div className={`text-xs mt-1 font-medium ${pnlColor(totalProfit)}`}>
+              收益率 {totalProfitPercent >= 0 ? "+" : ""}{totalProfitPercent.toFixed(2)}%
             </div>
           </div>
 
           {/* 总克重 + 均价 大卡 */}
           <div className="grid grid-cols-2 gap-2 mb-2">
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 col-span-2">
               <div className="text-xs font-medium text-blue-600 mb-1">总持仓克重</div>
               <div className="text-2xl font-bold font-mono text-blue-900">{totalQty.toFixed(4)} 克</div>
             </div>
@@ -250,6 +258,18 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
               <div className="text-xs font-medium text-cyan-600 mb-1">持仓均价</div>
               <div className="text-2xl font-bold font-mono text-cyan-900">
                 ¥{(holdings?.avg_price || 0).toFixed(2)}
+              </div>
+              <div className="text-[11px] text-cyan-400 mt-0.5">
+                摊薄成本 ¥{(holdings?.avg_cost_price || 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
+              <div className="text-xs font-medium text-purple-600 mb-1">总浮盈（未卖出）</div>
+              <div className={`text-2xl font-bold font-mono ${pnlColor(totalPnl)}`}>
+                {totalPnl >= 0 ? "+" : ""}¥{totalPnl.toFixed(2)}
+              </div>
+              <div className={`text-[11px] mt-0.5 ${pnlColor(totalPnl)}`}>
+                {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent.toFixed(2)}%
               </div>
             </div>
           </div>
@@ -358,6 +378,83 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
           )}
         </div>
 
+        {/* 交易记录 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ArrowUpRight size={16} className="text-gray-400" />
+            <div className="text-sm font-bold text-gray-900">交易记录</div>
+          </div>
+          {/* 时间范围切换 */}
+          <div className="flex items-center gap-2 mb-3">
+            {[
+              { label: "近7天", value: 7 },
+              { label: "近30天", value: 30 },
+              { label: "近90天", value: 90 },
+              { label: "全部", value: 365 },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setTradeRange(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  tradeRange === opt.value
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-500 active:bg-gray-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {trades.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="text-gray-400 text-sm">暂无交易记录</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {trades.slice().reverse().map((trade) => {
+                const amount = trade.qty ? trade.price * trade.qty : 0;
+                return (
+                  <div
+                    key={trade.id}
+                    className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {trade.side === "买" ? (
+                        <ArrowDownLeft size={14} className="text-green-600 shrink-0" />
+                      ) : (
+                        <ArrowUpRight size={14} className="text-red-600 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <div className={`text-sm font-semibold ${trade.side === "买" ? "text-green-600" : "text-red-600"}`}>
+                          {trade.side}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {formatBeijingDate(trade.ts, "MM月dd日 HH:mm")}
+                          {trade.note ? ` · ${trade.note}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-mono text-gray-900">
+                        ¥{trade.price.toFixed(2)} × {trade.qty?.toFixed(4) ?? "-"}克
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        金额 ¥{amount.toFixed(2)}
+                        {trade.side === "卖" && trade.realized_pnl !== undefined && (
+                          <span className={`ml-1 font-medium ${pnlColor(trade.realized_pnl)}`}>
+                            {trade.realized_pnl >= 0 ? "+" : ""}¥{trade.realized_pnl.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {loading && (
           <div className="text-center text-xs text-gray-400 py-2">加载中...</div>
         )}
@@ -402,6 +499,7 @@ export function MobileApp({ onOpenDesktop }: MobileAppProps) {
         }}
         defaultPrice={latestPrice}
         lot={sellLot}
+        allLots={holdings?.lots || []}
         onSubmit={handleSellSubmit}
       />
     </div>
@@ -530,12 +628,14 @@ function SellSheet({
   onClose,
   defaultPrice,
   lot,
+  allLots = [],
   onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
   defaultPrice: number;
   lot: HoldingLot | null;
+  allLots: HoldingLot[];
   onSubmit: (ts: number, price: number, qty: number, note: string, lotId: number) => Promise<void>;
 }) {
   const [price, setPrice] = useState("");
@@ -564,6 +664,18 @@ function SellSheet({
   const estimatedPnl = lot && qtyNum > 0 && parseFloat(price) > 0
     ? (parseFloat(price) - lot.cost_price) * qtyNum
     : null;
+
+  // 卖出前整体均价 = Σ(批次克数×成本) / Σ(批次克数)
+  const beforeTotalQty = allLots.reduce((s, l) => s + l.qty, 0);
+  const beforeTotalCost = allLots.reduce((s, l) => s + l.qty * l.cost_price, 0);
+  const beforeAvgPrice = beforeTotalQty > 0 ? beforeTotalCost / beforeTotalQty : 0;
+  // 卖出后：当前批次扣减 qtyNum（若 lot 为 null 则不变）
+  const afterQty = lot ? beforeTotalQty - qtyNum : beforeTotalQty;
+  const afterCost = lot && qtyNum <= lot.qty
+    ? beforeTotalCost - qtyNum * lot.cost_price
+    : beforeTotalCost;
+  const afterAvgPrice = afterQty > 0 ? afterCost / afterQty : 0;
+  const avgShift = afterAvgPrice - beforeAvgPrice;
 
   const handleSubmit = async () => {
     if (!lot) return;
@@ -660,6 +772,23 @@ function SellSheet({
               {estimatedPnl !== null ? `${estimatedPnl >= 0 ? "+" : ""}¥${estimatedPnl.toFixed(2)}` : "-"}
             </div>
           </div>
+
+          {beforeTotalQty > 0 && (
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
+              <div className="text-xs text-gray-500 mb-1">卖出后整体均价</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-mono text-gray-400 line-through">¥{beforeAvgPrice.toFixed(2)}</span>
+                <span className="text-sm font-bold font-mono text-gray-900">
+                  {qtyNum > 0 && lot && qtyNum <= lot.qty
+                    ? `→ ¥${afterAvgPrice.toFixed(2)}`
+                    : `→ ¥${afterAvgPrice.toFixed(2)}`}
+                </span>
+                <span className={`text-xs font-bold ${avgShift !== 0 ? pnlColor(avgShift) : "text-gray-400"}`}>
+                  {avgShift !== 0 ? `${avgShift > 0 ? "↑" : "↓"} ${Math.abs(avgShift).toFixed(2)}` : "—"}
+                </span>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleSubmit}

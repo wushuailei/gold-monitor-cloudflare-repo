@@ -8,6 +8,7 @@ interface HoldingsSectionProps {
   totalQty: number;
   totalCost: number;
   avgPrice: number;
+  avgCostPrice?: number; // 摊薄成本价
   realizedProfit: number;
   onSellLot: (lot: HoldingLot) => void;
 }
@@ -22,12 +23,15 @@ export function HoldingsSection({
   totalQty = 0,
   totalCost = 0,
   avgPrice = 0,
+  avgCostPrice = 0,
   realizedProfit = 0,
   onSellLot,
 }: HoldingsSectionProps) {
   const marketValue = totalQty > 0 && currentPrice > 0 ? totalQty * currentPrice : 0;
   const totalPnl = marketValue - totalCost;
-  const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  // 总收益 = 已实现盈亏 + 浮盈
+  const totalProfit = realizedProfit + totalPnl;
+  const totalProfitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
@@ -47,7 +51,7 @@ export function HoldingsSection({
       </div>
 
       {/* 批次汇总条 */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
           <div className="text-xs text-blue-600 font-medium mb-1">总持仓克重</div>
           <div className="text-xl font-bold font-mono text-blue-900">{totalQty.toFixed(4)} 克</div>
@@ -55,14 +59,15 @@ export function HoldingsSection({
         <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
           <div className="text-xs text-cyan-600 font-medium mb-1">持仓均价</div>
           <div className="text-xl font-bold font-mono text-cyan-900">¥{avgPrice.toFixed(2)}</div>
+          <div className="text-xs text-cyan-400 mt-0.5">摊薄成本 ¥{avgCostPrice.toFixed(2)}</div>
         </div>
-        <div className={`rounded-lg border p-3 ${pnlBg(totalPnl)} ${pnlBorder(totalPnl)}`}>
-          <div className={`text-xs font-medium mb-1 ${pnlColor(totalPnl)}`}>总浮盈/浮亏</div>
-          <div className={`text-xl font-bold font-mono ${pnlColor(totalPnl)}`}>
-            {totalPnl >= 0 ? "+" : ""}¥{totalPnl.toFixed(2)}
+        <div className={`rounded-lg border p-3 ${pnlBg(totalProfit)} ${pnlBorder(totalProfit)}`}>
+          <div className={`text-xs font-medium mb-1 ${pnlColor(totalProfit)}`}>总收益（已实现+浮盈）</div>
+          <div className={`text-xl font-bold font-mono ${pnlColor(totalProfit)}`}>
+            {totalProfit >= 0 ? "+" : ""}¥{totalProfit.toFixed(2)}
           </div>
-          <div className={`text-xs mt-0.5 ${pnlColor(totalPnl)}`}>
-            {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent.toFixed(2)}%
+          <div className={`text-xs mt-0.5 ${pnlColor(totalProfit)}`}>
+            {totalProfitPercent >= 0 ? "+" : ""}{totalProfitPercent.toFixed(2)}%
           </div>
         </div>
         <div className={`rounded-lg border p-3 ${pnlBg(realizedProfit)} ${pnlBorder(realizedProfit)}`}>

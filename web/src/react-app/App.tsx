@@ -164,6 +164,7 @@ function DesktopApp() {
           totalQty={holdings?.total_qty || 0}
           totalCost={holdings?.total_cost || 0}
           avgPrice={holdings?.avg_price || 0}
+          avgCostPrice={holdings?.avg_cost_price || 0}
           realizedProfit={holdings?.realized_profit || 0}
           onSellLot={handleSellLot}
         />
